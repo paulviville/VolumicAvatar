@@ -9,6 +9,12 @@ import {DualQuaternion} from './DualQuaternion.js';
 import CMap3 from './CMapJS/CMap/CMap3.js'
 import { cutAllEdges, quadrangulateAllFaces } from './CMapJS/Utils/Subdivision.js';
 import RendererDarts from '../CMapJS/Rendering/RendererDarts.js';
+import FBXImporter from './FBXImport.js';
+
+
+let fbxImporter = await FBXImporter.readFile("./Files/T-Pose.fbx");
+// let fbxImporter = await FBXImporter.readFile("./Files/reims.fbx");
+
 
 
 const scene = new THREE.Scene();
@@ -314,228 +320,6 @@ hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(0.05, 0.1, -0.
 
 
 
-
-
-function subdivideHexMesh(hexMesh, hexPos){
-	const vertex = hexMesh.vertex;
-	const edge = hexMesh.edge;
-	const face = hexMesh.face;
-	const volume = hexMesh.volume;
-
-
-	const path212 = [2, 1, 2];
-	const path_12_1 = [-1, 2, -1];
-	const path12_1 = [1, 2, -1];
-	const path23 = [2, 3];
-	const path21 = [2, 1];
-
-	const edgeVertCache = [];
-	const faceVertCache = [];
-	// const volumeMarker = hexMesh.newMarker(volume);
-	const volumeCache = hexMesh.cache(volume, wd => {
-		return !hexMesh.isBoundary(wd);
-	});
-
-	// hexMesh.foreach(volume, wd => {
-	// 	if(!hexMesh.isBoundary(wd))
-	// 		volumeMarker.mark(wd);
-	// });
-
-	// console.log("precut")
-	// hexMesh.foreachDart(d=> {
-	// 	console.log(`d:${d}, \tphi1:${hexMesh.phi1[d]}, \tphi_1:${hexMesh.phi2[d]}, \tphi2:${hexMesh.phi_1[d]}, \tw:${hexMesh.cell(volume, d)}`)
-	// })
-
-	quadrangulateAllFaces(hexMesh, 
-		vd => {
-			const vid = hexMesh.cell(vertex, vd);
-			const vid0 = hexMesh.cell(vertex, hexMesh.phi2[vd]);
-			const vid1 = hexMesh.cell(vertex, hexMesh.phi_1[vd]);
-			hexPos[vid] = hexPos[vid0].clone();
-			hexPos[vid].add(hexPos[vid1]);
-			hexPos[vid].multiplyScalar(0.5);
-
-			hexBind[vid] = hexPos[vid].clone();
-
-			const weights = [];
-			hexWeight[vid0].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			hexWeight[vid1].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			const weight = [];
-			weights.forEach((w, b) => {
-				w /= 2;
-				weight.push({b, w});
-			})
-	
-			hexWeight[vid] = weight
-
-			edgeVertCache.push(vd);
-		},
-		vd => {
-			const vid = hexMesh.cell(vertex, vd);
-			const vid0 = hexMesh.cell(vertex, hexMesh.phi1[vd])
-			const vid1 = hexMesh.cell(vertex, hexMesh.phi_1[vd])
-			const vid2 = hexMesh.cell(vertex, hexMesh.phi(path212, vd))
-			const vid3 = hexMesh.cell(vertex, hexMesh.phi(path_12_1, vd))
-
-			hexPos[vid] = hexPos[vid0].clone();
-			hexPos[vid].add(hexPos[vid1]);
-			hexPos[vid].add(hexPos[vid2]);
-			hexPos[vid].add(hexPos[vid3]);
-			hexPos[vid].multiplyScalar(0.25);
-
-			hexBind[vid] = hexPos[vid].clone()
-
-			const weights = [];
-			hexWeight[vid0].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			hexWeight[vid1].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			hexWeight[vid2].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			hexWeight[vid3].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-			const weight = [];
-			weights.forEach((w, b) => {
-				w /= 4;
-				weight.push({b, w});
-			})
-			hexWeight[vid] = weight
-
-			faceVertCache.push(hexMesh.isBoundary(vd) ? hexMesh.phi(path23, vd) : vd);
-			// faceVertCache.push(vd);
-	});
-
-	hexMesh.foreach(edge, ed => {
-		let d = ed;
-		do {
-			if(!hexMesh.isBoundary(d)){
-				let d01 = hexMesh.phi_1[d];
-				let d02 = hexMesh.phi2[d01];
-				let d21 = hexMesh.phi(path21, d);
-				let d22 = hexMesh.phi2[d21];
-
-				let fd0 = hexMesh.addFace(4, false);
-				let fd1 = hexMesh.addFace(4, false);
-
-				let ee = fd0;
-				let ff = fd1;
-
-				do {
-					hexMesh.sewPhi3(ee, ff);
-					ee = hexMesh.phi1[ee];
-					ff = hexMesh.phi_1[ff];
-				} while (ee != fd0);
-
-				hexMesh.unsewPhi2(d01);
-				hexMesh.unsewPhi2(d21);
-
-				hexMesh.sewPhi2(d01, fd0);
-				hexMesh.sewPhi2(d02, fd1);
-
-				hexMesh.sewPhi2(d21, hexMesh.phi_1[fd0]);
-				hexMesh.sewPhi2(d22, hexMesh.phi1[fd1]);
-			}
-			d = hexMesh.phi(path23, d);
-		} while (d != ed);
-
-	}, {cache: edgeVertCache});
-
-	const path2323 = [2, 3, 2, 3];
-	const path2321 = [2, 3, 2, 1];
-	// // const path_12_1 = [-1, 2, -1];
-	hexMesh.foreach(face, fd => {
-		let d0 = fd;
-		let d1 = hexMesh.phi(path2323, fd);
-		let d;
-
-		if(!hexMesh.isBoundary(d0)) {
-			d = d0;
-
-			do {
-				hexMesh.sewPhi2(hexMesh.phi(path21, d), hexMesh.phi(path_12_1, d));
-				d = hexMesh.phi(path2321, d);
-			} while (d != d0);
-		}
-		if(!hexMesh.isBoundary(d1)) {
-			d = d1;
-
-			do {
-				hexMesh.sewPhi2(hexMesh.phi(path21, d), hexMesh.phi(path_12_1, d));
-				d = hexMesh.phi(path2321, d);
-			} while (d != d1);
-		}
-	
-	}, {cache: faceVertCache});
-
-	const volumeVertCache = volumeCache.map(wd => {
-		return hexMesh.phi(path12_1, wd)
-	})
-	
-	const path12 = [1, 2];
-	const path_12 = [-1, 2];
-	const path_1232_12 = [-1, 2, 3, 2, -1, 2];
-	hexMesh.foreach(volume, wd => {
-		let wd0 = wd;
-		let wd1 = hexMesh.phi(path23, wd0);
-		let wd2 = hexMesh.phi(path23, wd1);
-		let wd3 = hexMesh.phi(path23, wd2);
-		let wd4 = hexMesh.phi(path_1232_12, wd);
-		let wd5 = hexMesh.phi(path23, wd4);
-		let wd6 = hexMesh.phi(path23, wd5);
-		let wd7 = hexMesh.phi(path23, wd6);
-
-		// const wds = [wd0, wd1, wd2, wd3, wd4, wd5, wd6, wd7]
-		// const wids = [hexMesh.cell(volume, hexMesh.phi(path12, wd0)), hexMesh.newCell(volume), hexMesh.newCell(volume),
-		// 	hexMesh.newCell(volume), hexMesh.newCell(volume), hexMesh.newCell(volume), 
-		// 	hexMesh.newCell(volume), hexMesh.newCell(volume)]
-		
-		// for(let i = 0; i < 8; ++i) {
-		// 	hexMesh.foreachDartOf(volume, wds[i], d => {
-		// 		hexMesh.setEmbedding(volume, d, wids[i])
-		// 	})
-		// }
-
-		const vid0 = hexMesh.newCell(vertex); 
-		hexMesh.foreachDartOf(vertex, wd, d => {
-			hexMesh.setEmbedding(vertex, d, vid0)
-			let d1 = hexMesh.phi2[d];
-			let vid1 = hexMesh.setEmbedding(vertex, d1, hexMesh.cell(vertex, hexMesh.phi(path_12, d1)))
-			let d2 = hexMesh.phi1[d];
-			hexMesh.setEmbedding(vertex, d2, vid1)
-			let d3 = hexMesh.phi_1[d1]
-			hexMesh.setEmbedding(vertex, d3, hexMesh.cell(vertex, hexMesh.phi(path21, d3)))
-		});
-
-
-		// hexWeight[vid0].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-		// hexWeight[vid1].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-		// hexWeight[vid2].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-		// hexWeight[vid3].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-
-
-		const weights = [];
-		hexPos[vid0] = new THREE.Vector3;
-		hexMesh.foreachAdjacent(edge, vertex, wd, vd => {
-			const vid = hexMesh.cell(vertex, vd);
-			hexPos[vid0].add(hexPos[vid]);
-
-			hexWeight[vid].forEach(b => { weights[b.b] = (weights[b.b] ?? 0) + b.w })
-		})
-
-		hexPos[vid0].multiplyScalar(1 / 6);
-		hexBind[vid0] = hexPos[vid0].clone()
-
-		const weight = [];
-		weights.forEach((w, b) => {
-			w /= 6;
-			weight.push({b, w});
-		})
-		hexWeight[vid0] = weight
-
-	}, {cache: volumeVertCache})
-
-	// console.log(hexWeight)
-}
-
-subdivideHexMesh(hexMesh, hexPos)
-subdivideHexMesh(hexMesh, hexPos)
-
 // const hexRenderer2 = new RendererDarts(hexMesh2);
 // hexRenderer2.volumes.create({color: 0x7777BB}).rescale(0.9);
 // hexRenderer2.volumes.addTo(scene)
@@ -610,8 +394,6 @@ function update (t)
 
 	hexRenderer.vertices.update()
 	hexRenderer.edges.update()
-	// hexRenderer.volumes.update()
-	// hexRenderer.volumes.rescale(0.9)
 }
 
 function render()
@@ -619,7 +401,6 @@ function render()
 	renderer.render(scene, camera);
 }
 
-// let prevT = 0;
 function mainloop(t)
 { 
     update(t);
