@@ -15,7 +15,8 @@ import FBXImporter from './FBXImport.js';
 let fbxImporter = await FBXImporter.readFile("./Files/T-Pose.fbx");
 // let fbxImporter = await FBXImporter.readFile("./Files/reims.fbx");
 
-
+// let cmap = fbxImporter.cmap;
+// console.log(fbxImporter)
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeeeeee);
