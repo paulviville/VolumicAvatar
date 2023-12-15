@@ -12,16 +12,12 @@ import RendererDarts from '../CMapJS/Rendering/RendererDarts.js';
 import FBXImporter from './FBXImport.js';
 
 
-let fbxImporter = await FBXImporter.readFile("./Files/T-Pose.fbx");
-// let fbxImporter = await FBXImporter.readFile("./Files/reims.fbx");
-
-// let cmap = fbxImporter.cmap;
-// console.log(fbxImporter)
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeeeeee);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 1000.0);
-camera.position.set(0, 0.5, 1.5);
+camera.position.set(0, 200, 250);
+// camera.position.set(10, 10.5, 11.5);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
@@ -32,7 +28,10 @@ let pointLight0 = new THREE.PointLight(0xffffff, 1);
 pointLight0.position.set(10,8,5);
 scene.add(pointLight0);
 
+
 const orbit_controls = new OrbitControls(camera, renderer.domElement)
+orbit_controls.target.set(0, 100, 0)
+orbit_controls.update()
 
 
 window.addEventListener('resize', function() {
@@ -42,6 +41,60 @@ window.addEventListener('resize', function() {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
 });
+
+window.camera = function() {
+	console.log(camera.position)
+	console.log(camera)
+}
+
+
+
+let cmaps = [];
+let cmapRenderers = [];
+let fbxImporter;
+
+// async function loadFBX() {
+// 	let fbxImporter = await FBXImporter.readFile("./Files/T-Pose.fbx").then(c => {return c});
+// 	console.log(fbxImporter)
+// }
+// loadFBX()
+
+
+function loadFileAsync(url, callback) {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4) {
+			if (xhr.status === 200) {
+				// Successful request
+				callback(null, xhr.responseText);
+			} else {
+				// Request failed
+				callback(new Error('Failed to load file from ' + url));
+			}
+		}
+	};
+
+	xhr.open('GET', url, true);
+	xhr.send();
+}
+
+loadFileAsync("./Files/T-Pose.fbx", function(error, fileText) {
+	if(error) {
+
+	} else {
+		fbxImporter = new FBXImporter(fileText);
+		cmaps[0] = fbxImporter.cmaps[0]
+		cmaps[1] = fbxImporter.cmaps[1]
+		cmapRenderers[0] = new Renderer(cmaps[0]);
+		cmapRenderers[1] = new Renderer(cmaps[1]);
+
+		cmapRenderers[0].edges.create({size: 20}).addTo(scene)
+		cmapRenderers[1].edges.create({size: 15}).addTo(scene)
+
+		// console.log(cmap.getAttribute(cmap.vertex, "position"))
+	}
+})
+
 
 
 
