@@ -358,13 +358,172 @@ export default class FBXImporter {
 		return i - 1;
 	}
 
+	/// does nothing for now
+	#readConstraint(firstLine, constraint) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	/// does nothing for now
+	#readPose(firstLine, pose) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	/// does nothing for now
+	#readMaterial(firstLine, material) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+	
+	#readSkinDeformer(firstLine, deformer) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+
+			if (this.#lines[i].includes("Link_DeformAcuracy:")) {
+				const acuracy = parseInt(this.#lines[i].split(":")[1]);
+				deformer["Link_DeformAcuracy"] = acuracy;
+			}
+
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	#readClusterDeformer(firstLine, deformer) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+
+			const property = this.#lines[i].split(":")[0];
+			switch(property) {
+				case "Indexes":
+					deformer["indexes"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["indexes"] = deformer["indexes"].map(x => {return parseInt(x)});
+				break;
+				case "Weights":
+					deformer["weights"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["weights"] = deformer["weights"].map(x => {return parseFloat(x)});
+				break;
+				case "Transform":
+					deformer["transform"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["transform"] = deformer["transform"].map(x => {return parseFloat(x)});
+				break;
+				case "TransformLink":
+					deformer["transformLink"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["transformLink"] = deformer["transformLink"].map(x => {return parseFloat(x)});
+				break;
+				default:
+			}
+
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	#readDeformer(firstLine, deformer) {
+		let i = firstLine;
+		// let nbBrackets = 0;
+
+		let deformerInfo = this.#lines[i].replace(/"/g, "");
+		deformerInfo = deformerInfo.replace("{", "");
+		deformerInfo = deformerInfo.split(",");
+
+		deformer.id = parseInt(deformerInfo[0].split(":")[1]);
+		deformer.name = deformerInfo[1].split(":").pop();
+		deformer.type = deformerInfo.pop().trim();
+
+		if(deformer.type == "Skin")
+			i = this.#readSkinDeformer(firstLine, deformer);
+
+		if(deformer.type == "Cluster")
+			i = this.#readClusterDeformer(firstLine, deformer);
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
+		console.log(deformer)
+		return i;
+	}
+
+	/// does nothing for now
+	#readAnimationStack(firstLine, animationStack) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	#readAnimationCurve(firstLine, animationCurve) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
 
 	#readObjects() {
-		let objectsStart = this.#findLine('Objects:');
 
 		this.#objects.nodeAttributes = [];
 		this.#objects.geometries = [];
 		this.#objects.models = [];
+		this.#objects.constraint = [];
+		this.#objects.pose = [];
+		this.#objects.materials = [];
+		this.#objects.deformers = [];
+		this.#objects.animationStacks = [];
+		this.#objects.animationCurves = [];
+
+		let objectsStart = this.#findLine('Objects:');
 		let i = objectsStart;
 
 		let nbBrackets = 0;
@@ -386,9 +545,46 @@ export default class FBXImporter {
 			if(this.#lines[i].includes('Model:') && !this.#lines[i].includes('ShadingModel:')){
 				let model = {};
 				i = this.#readModel(i, model);
-				this.#objects.models.push(model)
+				this.#objects.models.push(model);
 			}
-			
+
+			if(this.#lines[i].includes('Constraint:') && !this.#lines[i].includes('ShadingModel:')){
+				let constraint = {};
+				i = this.#readConstraint(i, constraint);
+				this.#objects.constraint.push(constraint);
+			}
+
+			if(this.#lines[i].includes('Pose:') && !this.#lines[i].includes('ShadingModel:')){
+				let pose = {};
+				i = this.#readPose(i, pose);
+				this.#objects.pose.push(pose);
+			}
+
+			if(this.#lines[i].includes('Material:') && !this.#lines[i].includes('ShadingModel:')){
+				let material = {};
+				i = this.#readMaterial(i, material);
+				this.#objects.materials.push(material);
+			}
+
+			if(this.#lines[i].includes('Deformer:') && !this.#lines[i].includes('ShadingModel:')){
+				let deformer = {};
+				i = this.#readDeformer(i, deformer);
+				this.#objects.deformers.push(deformer);
+			}
+
+			if(this.#lines[i].includes('AnimationStack:') && !this.#lines[i].includes('ShadingModel:')){
+				let animationStack = {};
+				i = this.#readAnimationStack(i, animationStack);
+				this.#objects.animationStacks.push(animationStack);
+			}
+
+			if(this.#lines[i].includes('AnimationCurve:') && !this.#lines[i].includes('ShadingModel:')){
+				let animationCurve = {};
+				i = this.#readAnimationCurve(i, animationCurve);
+				this.#objects.animationCurves.push(animationCurve);
+			}
+
+
 			nbBrackets -= Number(this.#lines[i].includes('}'))
 			++i;
 		} while(nbBrackets != 0)
