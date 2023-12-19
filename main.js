@@ -53,12 +53,6 @@ let cmaps = [];
 let cmapRenderers = [];
 let fbxImporter;
 
-// async function loadFBX() {
-// 	let fbxImporter = await FBXImporter.readFile("./Files/T-Pose.fbx").then(c => {return c});
-// 	console.log(fbxImporter)
-// }
-// loadFBX()
-
 
 function loadFileAsync(url, callback) {
 	var xhr = new XMLHttpRequest();
@@ -88,8 +82,8 @@ loadFileAsync("./Files/T-Pose.fbx", function(error, fileText) {
 		cmapRenderers[0] = new Renderer(cmaps[0]);
 		cmapRenderers[1] = new Renderer(cmaps[1]);
 
-		cmapRenderers[0].edges.create({size: 20}).addTo(scene)
-		cmapRenderers[1].edges.create({size: 15}).addTo(scene)
+		cmapRenderers[0].edges.create({size: 30, color: 0x0000EE}).addTo(scene)
+		cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
 	}

@@ -433,19 +433,19 @@ export default class FBXImporter {
 			switch(property) {
 				case "Indexes":
 					deformer["indexes"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["indexes"] = deformer["indexes"].map(x => {return parseInt(x)});
+					deformer["indexes"] = deformer["indexes"].map(x => parseInt(x));
 				break;
 				case "Weights":
 					deformer["weights"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["weights"] = deformer["weights"].map(x => {return parseFloat(x)});
+					deformer["weights"] = deformer["weights"].map(x => parseFloat(x));
 				break;
 				case "Transform":
 					deformer["transform"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["transform"] = deformer["transform"].map(x => {return parseFloat(x)});
+					deformer["transform"] = deformer["transform"].map(x => parseFloat(x));
 				break;
 				case "TransformLink":
 					deformer["transformLink"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["transformLink"] = deformer["transformLink"].map(x => {return parseFloat(x)});
+					deformer["transformLink"] = deformer["transformLink"].map(x => parseFloat(x));
 				break;
 				default:
 			}
@@ -499,17 +499,100 @@ export default class FBXImporter {
 
 	#readAnimationCurve(firstLine, animationCurve) {
 		let i = firstLine;
+
+		let curveInfo = this.#lines[i].replace(/"/g, "");
+		curveInfo = curveInfo.replace("{", "");
+		curveInfo = curveInfo.split(",");
+
+		animationCurve.id = parseInt(curveInfo[0].split(":")[1]);
+
 		let nbBrackets = 0;
 		do {
 			nbBrackets += Number(this.#lines[i].includes('{'))
+
+			const header = this.#lines[i].split(":")[0];
+
+			switch(header) {
+				case "Default": 
+					animationCurve.Default = parseFloat(this.#lines[i].split(":")[1])
+					break;
+				case "KeyTime":
+					++i;
+					animationCurve.KeyTime = this.#lines[i].split(":")[1];
+					animationCurve.KeyTime = animationCurve.KeyTime.split(",");
+					animationCurve.KeyTime = animationCurve.KeyTime.map(kt => parseInt(kt));
+					break;
+				case "KeyValueFloat":
+					++i;
+					animationCurve.KeyValueFloat = this.#lines[i].split(":")[1];
+					animationCurve.KeyValueFloat = animationCurve.KeyValueFloat.split(",");
+					animationCurve.KeyValueFloat = animationCurve.KeyValueFloat.map(kf => parseFloat(kf));
+					break;
+				case "KeyAttrFlags":
+					++i;
+					animationCurve.KeyAttrFlags = this.#lines[i].split(":")[1];
+					animationCurve.KeyAttrFlags = animationCurve.KeyAttrFlags.split(",");
+					animationCurve.KeyAttrFlags = animationCurve.KeyAttrFlags.map(kt => parseInt(kt));
+					break;
+				case "KeyAttrDataFloat":
+					++i;
+					animationCurve.KeyAttrDataFloat = this.#lines[i].split(":")[1];
+					animationCurve.KeyAttrDataFloat = animationCurve.KeyAttrDataFloat.split(",");
+					animationCurve.KeyAttrDataFloat = animationCurve.KeyAttrDataFloat.map(kf => parseFloat(kf));
+					break;
+				case "KeyAttrRefCount":
+					++i;
+					animationCurve.KeyAttrRefCount = this.#lines[i].split(":")[1];
+					animationCurve.KeyAttrRefCount = animationCurve.KeyAttrRefCount.split(",");
+					animationCurve.KeyAttrRefCount = animationCurve.KeyAttrRefCount.map(kt => parseInt(kt));
+					break;
+				default:
+
+			}
+
+			
 			nbBrackets -= Number(this.#lines[i].includes('}'))
 			++i;
 		} while(nbBrackets != 0)
 
+		console.log(animationCurve)
 		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
+
+	#readAnimationCurveNode(firstLine, animationCurveNode) {
+		let i = firstLine;
+
+		let curveInfo = this.#lines[i].replace(/"/g, "");
+		curveInfo = curveInfo.replace("{", "");
+		curveInfo = curveInfo.split(",");
+
+		animationCurveNode.id = parseInt(curveInfo[0].split(":")[1]);
+		animationCurveNode.type = curveInfo[1].split(":").pop();
+
+
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			
+			if (this.#lines[i].includes("P:")) {
+				let line = this.#lines[i].split(":")[1].split(",");
+				let axis = line.shift().trim()[3];
+				let value = parseFloat(line.pop())
+				animationCurveNode[axis] = value;
+			}
+			
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		console.log(animationCurveNode)
+		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
 
 	#readObjects() {
 
@@ -522,6 +605,7 @@ export default class FBXImporter {
 		this.#objects.deformers = [];
 		this.#objects.animationStacks = [];
 		this.#objects.animationCurves = [];
+		this.#objects.animationCurveNodes = [];
 
 		let objectsStart = this.#findLine('Objects:');
 		let i = objectsStart;
@@ -582,6 +666,12 @@ export default class FBXImporter {
 				let animationCurve = {};
 				i = this.#readAnimationCurve(i, animationCurve);
 				this.#objects.animationCurves.push(animationCurve);
+			}
+
+			if(this.#lines[i].includes('AnimationCurveNode:') && !this.#lines[i].includes('ShadingModel:')){
+				let animationCurveNode = {};
+				i = this.#readAnimationCurveNode(i, animationCurveNode);
+				this.#objects.animationCurves.push(animationCurveNode);
 			}
 
 
