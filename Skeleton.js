@@ -204,7 +204,7 @@ export function SkeletonRenderer (skeleton) {
 		this.vertices.instanceId = skeleton.newBoneAttribute("vertexInstanceId");
 		this.vertices.bones = [];
 
-		const size = 0.009;
+		const size = 2;
 		const scale = new THREE.Vector3(size, size, size);
 
 		let id = 0;
@@ -221,7 +221,7 @@ export function SkeletonRenderer (skeleton) {
 	}
 
 	this.updateVertices = function () {
-		const size = 0.009;
+		const size = 3;
 		const scale = new THREE.Vector3(size, size, size);
 		skeleton.foreachBone(bone => {
 			const id = this.vertices.instanceId[bone];
@@ -236,7 +236,7 @@ export function SkeletonRenderer (skeleton) {
 	// this.
 
 	this.createEdges = function () {
-		const geometry = new THREE.ConeGeometry(0.0085, 1, 16, 1);
+		const geometry = new THREE.ConeGeometry(2., 1, 16, 1);
 		const material = new THREE.MeshLambertMaterial();
 
 		this.edges = new THREE.InstancedMesh(geometry, material, skeleton.nbBones());

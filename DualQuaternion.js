@@ -31,6 +31,15 @@ class DualQuaternion {
 		return new DualQuaternion( q , qt ).normalize();
 	}
 
+	static setFromTranslationRotation( q, t ) {
+
+		const qt = new Quaternion(t.x, t.y, t.z, 0);
+
+		qt.multiply(q).multiplyScalar(0.5);
+
+		return new DualQuaternion( q , qt ).normalize();
+	}
+
 	static setFromTranslation( t ) {
 
 		return DualQuaternion.setFromRotationTranslation ( new Quaternion(), t );

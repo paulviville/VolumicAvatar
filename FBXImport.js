@@ -1,5 +1,9 @@
 import  CMap2  from "./CMapJS/CMap/CMap2.js";
 import { mapFromGeometry } from "./CMapJS/IO/SurfaceFormats/CMap2IO.js";
+import { Quaternion } from "./CMapJS/Libs/three.module.js";
+import Skeleton, { Key } from "./Skeleton.js";
+import * as THREE from './CMapJS/Libs/three.module.js';
+import { DualQuaternion } from "./DualQuaternion.js";
 
 export default class FBXImporter {
 	#fbxString;
@@ -7,19 +11,28 @@ export default class FBXImporter {
 	#objects = {};
 	#connections = {};
 	#cmaps = [];
+	#geometriesById = {};
+	#skeleton;
+	#boneById;
+	#deformersById = {};
+	#skinDeformersById = {};
 	cmaps;
+
 	constructor(fbxString) {
 		this.#fbxString = fbxString;
 		this.#clean();
-		console.log(this.#lines.length)
 		this.#readObjects();
-		// this.#readConnections();
+		this.#readConnections();
 		
 		this.#objects.geometries.forEach(geometry => {
 			this.#cmaps.push(this.#processGeometry(geometry));
 		})
 
+		this.#processSkeleton();
+		this.#skinSkeleton();
+
 		console.log(this.#cmaps)
+		console.log(this.#skeleton)
 		this.cmaps = this.#cmaps;
 	}
 
@@ -41,7 +54,6 @@ export default class FBXImporter {
 
 	#findLine(incl) {
 		let i = 0;
-		console.log(this.#lines[i])
 		while(!this.#lines[i].includes(incl))
 			++i;
 		return i;
@@ -58,7 +70,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -113,7 +125,7 @@ export default class FBXImporter {
 		}
 		polygons.pop()
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
 		
 		return i;
 	}
@@ -133,7 +145,7 @@ export default class FBXImporter {
 			edges.push(parseFloat(eStr))
 		})
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
 
 		return i;
 	}
@@ -151,7 +163,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -169,7 +181,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -184,7 +196,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -199,14 +211,15 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
 
-
 	#readGeometry(firstLine, geometry) {
 		let i = firstLine;
+		const id = this.#lines[firstLine].split(",")[0].split(": ")[1];
+		geometry.id = id;
 
 		let nbBrackets = 0;
 		do {
@@ -255,7 +268,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -270,9 +283,7 @@ export default class FBXImporter {
 				let property = this.#lines[i].replace(/"/g, "");
 				property = property.replace("P:", "");
 				property = property.split(",");
-				console.log(property)
 				const propertyName = property.shift().trim()
-				// properties[propertyName] = [];
 
 				switch(propertyName) {
 					case "PreRotation":
@@ -323,8 +334,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(properties)
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -353,7 +363,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -368,7 +378,22 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+
+		return i - 1;
+	}
+
+	/// does nothing for now
+	#readPoseNode(firstLine, poseNode) {
+		let i = firstLine;
+		let nbBrackets = 0;
+		do {
+			nbBrackets += Number(this.#lines[i].includes('{'))
+			nbBrackets -= Number(this.#lines[i].includes('}'))
+			++i;
+		} while(nbBrackets != 0)
+
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -383,7 +408,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -398,7 +423,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -418,7 +443,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -454,14 +479,13 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
 
 	#readDeformer(firstLine, deformer) {
 		let i = firstLine;
-		// let nbBrackets = 0;
 
 		let deformerInfo = this.#lines[i].replace(/"/g, "");
 		deformerInfo = deformerInfo.replace("{", "");
@@ -471,14 +495,17 @@ export default class FBXImporter {
 		deformer.name = deformerInfo[1].split(":").pop();
 		deformer.type = deformerInfo.pop().trim();
 
-		if(deformer.type == "Skin")
+
+		if(deformer.type == "Skin") {
 			i = this.#readSkinDeformer(firstLine, deformer);
+			this.#skinDeformersById[deformer.id] = deformer;
+		}
 
-		if(deformer.type == "Cluster")
+		if(deformer.type == "Cluster") {
 			i = this.#readClusterDeformer(firstLine, deformer);
+			this.#deformersById[deformer.id] = deformer;
+		}
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i]);
-		console.log(deformer)
 		return i;
 	}
 
@@ -492,7 +519,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -555,8 +582,7 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(animationCurve)
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
@@ -587,15 +613,12 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(animationCurveNode)
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
 		return i - 1;
 	}
 
-
 	#readObjects() {
-
 		this.#objects.nodeAttributes = [];
 		this.#objects.geometries = [];
 		this.#objects.models = [];
@@ -606,6 +629,7 @@ export default class FBXImporter {
 		this.#objects.animationStacks = [];
 		this.#objects.animationCurves = [];
 		this.#objects.animationCurveNodes = [];
+
 
 		let objectsStart = this.#findLine('Objects:');
 		let i = objectsStart;
@@ -679,36 +703,159 @@ export default class FBXImporter {
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[objectsStart], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[objectsStart], " -> ", this.#lines[i - 1]);
+	}
+
+	#readConnectionOO(i, connectionOO) {
+		let line = this.#lines[i].split(",");
+		connectionOO.childId = parseInt(line[1]);
+		connectionOO.parentId = parseInt(line[2]);
+		return i;
+	}
+
+	#readConnectionOP(i, connectionOP) {
+		let line = this.#lines[i].split(",");
+		connectionOP.childId = parseInt(line[1]);
+		connectionOP.parentId = parseInt(line[2]);
+		connectionOP.propertyName = line[3];
+		return i;
 	}
 
 	#readConnections() {
+		this.#connections = {
+			OO: [],
+			OP: [],
+		}
+
 		let firstLine = this.#findLine('Connections:');
 		let i = firstLine;
+
+
 
 		let nbBrackets = 0;
 		do {
 			nbBrackets += Number(this.#lines[i].includes('{'))
 
-			// if (this.#lines[i].includes("NodeAttribute:")) {
-			// 	let nodeAttribute = {};
-			// 	i = this.#readNodeAttribute(i, nodeAttribute);
-			// 	this.#objects.nodeAttributes.push(nodeAttribute);
-			// }
+			let connection = {};
+			if (this.#lines[i].includes("OO")) {
+				this.#readConnectionOO(i, connection);
+				this.#connections.OO.push(connection)
+			}
+			if (this.#lines[i].includes("OP")) {
+				this.#readConnectionOP(i, connection);
+				this.#connections.OP.push(connection)
+			}
 			
 			nbBrackets -= Number(this.#lines[i].includes('}'))
 			++i;
 		} while(nbBrackets != 0)
 
-		console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
+		// console.log(this.#lines[firstLine], " -> ", this.#lines[i - 1]);
 
-		console.log(this.#connections)
-		console.log(this.#lines.length, i)
 	}
 
 	#processGeometry(geometry) {
 		const cmap2 = mapFromGeometry({v: geometry.vertices, f: geometry.polygons});
+		this.#geometriesById[geometry.id] = cmap2;		
 		return cmap2;
+	}
+
+	#processSkeleton() {
+		this.#skeleton = new Skeleton;
+
+		this.#boneById = {};
+		// const meshes = {};
+
+		// TODO : pre sort models by type
+		this.#objects.models.forEach(model => {
+			if(model.type != "LimbNode")
+				return;
+
+			/// creating bones
+			const bone = this.#skeleton.newBone(model.name);
+			this.#boneById[model.id] = bone; 
+
+			/// setting bone local transform
+			const rotation = new Quaternion;
+			if(model.properties["PreRotation"]) {
+				const eulerRotation = new THREE.Euler().fromArray([...(model.properties["PreRotation"].map(angle => angle*Math.PI/180)), 'ZYX']);
+				rotation.setFromEuler(eulerRotation);
+				rotation.normalize();
+			}
+			
+			const vTranslation = new THREE.Vector3();
+			if(model.properties["Lcl Translation"]) {
+				vTranslation.fromArray(model.properties["Lcl Translation"])
+			}
+			const translation = new Quaternion(vTranslation.x, vTranslation.y, vTranslation.z, 0);
+
+			if(model.properties["Lcl Rotation"]) {
+				console.log("Lcl Rotation")
+			}
+
+			const transform = DualQuaternion.setFromTranslationRotation(rotation, translation);
+			
+			
+			// this.#skeleton.setLocalTransform(bone, transform);
+			this.#skeleton.addKey(bone, new Key(0, transform));
+		});
+
+
+		this.#connections.OO.forEach(connection => {
+			if(connection.parentId == 0)
+				return;
+
+			let childBone = this.#boneById[connection.childId];
+			let parentBone = this.#boneById[connection.parentId];
+			/// skip node attributes, materials, etc...
+			if(childBone == undefined || parentBone == undefined) 
+				return;
+
+			this.#skeleton.setParent(childBone, parentBone);
+		});
+
+	}
+
+	#skinSkeleton() {
+		const deformers = this.#objects.deformers;
+		// console.log(deformers)
+		// console.log(this.#connections.OO)
+		// console.log(this.#connections.OP)
+		// console.log(this.#deformersById)
+		const skinsToGeometry = {};
+		const subdeformerToSkin = {};
+
+		this.#connections.OO.forEach(connection => {
+			// console.log(connection);
+			// console.log(connection.childId, this.#deformersById[connection.childId], connection.parentId, this.#deformersById[connection.parentId])
+			if(this.#skinDeformersById[connection.childId]) {
+				skinsToGeometry[connection.childId] = this.#geometriesById[connection.parentId];
+				// console.log(this.#skinDeformersById[connection.childId], this.#geometriesById[connection.parentId])
+				return;
+			}
+
+			if(this.#deformersById[connection.childId] && this.#skinDeformersById[connection.parentId]) {
+				console.log(this.#deformersById[connection.childId], this.#skinDeformersById[connection.parentId])
+				subdeformerToSkin[connection.childId] = connection.parentId;
+				return;
+			}
+
+			if(this.#boneById[connection.childId] && this.#deformersById[connection.parentId]) {
+				console.log(this.#boneById[connection.childId], this.#deformersById[connection.parentId])
+
+				return;
+			}
+
+		
+		});
+
+		console.log(skinsToGeometry)
+		console.log(subdeformerToSkin)
+
+	}
+
+	getSkeleton() {
+		return this.#skeleton;		
 	}
 
 	// static async readFile(filePath) {
