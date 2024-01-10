@@ -29,6 +29,7 @@ export default class FBXImporter {
 		})
 
 		this.#processSkeleton();
+		this.#processAnimation();
 		this.#skinSkeleton();
 
 		console.log(this.#cmaps)
@@ -457,20 +458,34 @@ export default class FBXImporter {
 			const property = this.#lines[i].split(":")[0];
 			switch(property) {
 				case "Indexes":
-					deformer["indexes"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["indexes"] = deformer["indexes"].map(x => parseInt(x));
+					++i;
+					let indices = "";
+					while (!this.#lines[i].includes('}')) {
+						indices += this.#lines[i];
+						++i;
+					}
+					deformer["Indexes"] = indices.split(":")[1].split(",");
+					deformer["Indexes"] = deformer["Indexes"].map(x => parseInt(x));
 				break;
 				case "Weights":
-					deformer["weights"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["weights"] = deformer["weights"].map(x => parseFloat(x));
+					++i;
+					let weights = "";
+					while (!this.#lines[i].includes('}')) {
+						weights += this.#lines[i];
+						++i;
+					}
+					deformer["Weights"] = weights.split(":")[1].split(",");
+					deformer["Weights"] = deformer["Weights"].map(x => parseFloat(x));
 				break;
 				case "Transform":
-					deformer["transform"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["transform"] = deformer["transform"].map(x => parseFloat(x));
+					deformer["Transform"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["Transform"] = deformer["Transform"].map(x => parseFloat(x));
+					deformer["Transform"] = new THREE.Matrix4().fromArray(deformer["Transform"]);
 				break;
 				case "TransformLink":
-					deformer["transformLink"] = this.#lines[++i].split(":")[1].split(",");
-					deformer["transformLink"] = deformer["transformLink"].map(x => parseFloat(x));
+					deformer["TransformLink"] = this.#lines[++i].split(":")[1].split(",");
+					deformer["TransformLink"] = deformer["TransformLink"].map(x => parseFloat(x));
+					deformer["TransformLink"] = new THREE.Matrix4().fromArray(deformer["TransformLink"]);
 				break;
 				default:
 			}
@@ -756,7 +771,7 @@ export default class FBXImporter {
 
 	#processGeometry(geometry) {
 		const cmap2 = mapFromGeometry({v: geometry.vertices, f: geometry.polygons});
-		this.#geometriesById[geometry.id] = cmap2;		
+		this.#geometriesById[geometry.id] = cmap2;	
 		return cmap2;
 	}
 
@@ -816,42 +831,56 @@ export default class FBXImporter {
 
 	}
 
+	#processAnimation() {
+		const connections = this.#connections.OP;
+		const animationCurves = {};
+		const animationCurveNodes = {};
+		this.#objects.animationCurves.forEach(animationCurve => {
+			animationCurves[animationCurve.id] = animationCurve;
+		});
+		this.#objects.animationCurveNodes.forEach(animationCurveNode => {
+			animationCurveNodes[animationCurveNode.id] = animationCurveNode;
+		});
+	}
+
 	#skinSkeleton() {
-		const deformers = this.#objects.deformers;
-		// console.log(deformers)
-		// console.log(this.#connections.OO)
-		// console.log(this.#connections.OP)
-		// console.log(this.#deformersById)
+		this.#cmaps.forEach(cmap => {
+			const weights = cmap.addAttribute(cmap.vertex, "weights");
+			cmap.foreach(cmap.vertex, vd => {
+				weights[cmap.cell(cmap.vertex, vd)] = [];
+			});
+		})
+
 		const skinsToGeometry = {};
 		const subdeformerToSkin = {};
 
 		this.#connections.OO.forEach(connection => {
-			// console.log(connection);
-			// console.log(connection.childId, this.#deformersById[connection.childId], connection.parentId, this.#deformersById[connection.parentId])
 			if(this.#skinDeformersById[connection.childId]) {
 				skinsToGeometry[connection.childId] = this.#geometriesById[connection.parentId];
-				// console.log(this.#skinDeformersById[connection.childId], this.#geometriesById[connection.parentId])
 				return;
 			}
 
 			if(this.#deformersById[connection.childId] && this.#skinDeformersById[connection.parentId]) {
-				console.log(this.#deformersById[connection.childId], this.#skinDeformersById[connection.parentId])
 				subdeformerToSkin[connection.childId] = connection.parentId;
-				return;
-			}
-
-			if(this.#boneById[connection.childId] && this.#deformersById[connection.parentId]) {
-				console.log(this.#boneById[connection.childId], this.#deformersById[connection.parentId])
+				if(connection.childId == 66207584) {
+					console.log(this.#deformersById[connection.childId])
+				}
 
 				return;
 			}
 
-		
+			if(this.#boneById[connection.childId] != undefined && this.#deformersById[connection.parentId] != undefined) {
+				const bone = this.#boneById[connection.childId];
+				const subdeformer = this.#deformersById[connection.parentId];
+
+				const cmap = skinsToGeometry[subdeformerToSkin[connection.parentId]];
+				const weights = cmap.getAttribute(cmap.vertex, "weights");
+				for(let i = 0; i < (subdeformer.Indexes?.length || 0); ++i) {
+					weights[subdeformer.Indexes[i]].push({b: bone, w: subdeformer.Weights[i]});
+				}
+				return;
+			}
 		});
-
-		console.log(skinsToGeometry)
-		console.log(subdeformerToSkin)
-
 	}
 
 	getSkeleton() {
