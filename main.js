@@ -73,7 +73,7 @@ function loadFileAsync(url, callback) {
 	xhr.send();
 }
 
-loadFileAsync("./Files/T-Pose.fbx", function(error, fileText) {
+loadFileAsync("./Files/Walking.fbx", function(error, fileText) {
 	if(error) {
 
 	} else {

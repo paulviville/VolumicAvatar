@@ -710,7 +710,7 @@ export default class FBXImporter {
 			if(this.#lines[i].includes('AnimationCurveNode:') && !this.#lines[i].includes('ShadingModel:')){
 				let animationCurveNode = {};
 				i = this.#readAnimationCurveNode(i, animationCurveNode);
-				this.#objects.animationCurves.push(animationCurveNode);
+				this.#objects.animationCurveNodes.push(animationCurveNode);
 			}
 
 
@@ -835,11 +835,56 @@ export default class FBXImporter {
 		const connections = this.#connections.OP;
 		const animationCurves = {};
 		const animationCurveNodes = {};
+		const boneAnimationNodes = {};
+
 		this.#objects.animationCurves.forEach(animationCurve => {
 			animationCurves[animationCurve.id] = animationCurve;
 		});
 		this.#objects.animationCurveNodes.forEach(animationCurveNode => {
 			animationCurveNodes[animationCurveNode.id] = animationCurveNode;
+		});
+
+		console.log(animationCurves)
+		console.log(this.#objects.animationCurveNodes)
+
+		// find node curves for each axis
+		connections.forEach(connection => {
+			if(animationCurves[connection.childId] && animationCurveNodes[connection.parentId]) {
+				const animationCurve = animationCurves[connection.childId];
+				const axis = connection.propertyName[4]; /// not great
+				const animationCurveNode = animationCurveNodes[connection.parentId];
+				animationCurveNode[axis] = connection.childId;
+			}
+		});
+
+		// attach node to bone
+		connections.forEach(connection => {
+
+			if(animationCurveNodes[connection.childId] && this.#boneById[connection.parentId] != undefined) {
+			// 	const axis = connection.propertyName[4]; /// not great
+				const animationCurveNode = animationCurveNodes[connection.childId];
+				const bone = this.#boneById[connection.parentId];
+			// 	animationCurveNode[axis] = connection.childId;
+			// 	console.log(axis)
+			// 	console.log(animationCurve)
+				console.log(bone, animationCurveNode)
+				const Xcurve = animationCurves[animationCurveNode.X];
+				const Ycurve = animationCurves[animationCurveNode.Y];
+				const Zcurve = animationCurves[animationCurveNode.Z];
+
+				console.log(Xcurve, Ycurve, Zcurve)
+
+				// if(animationCurveNode.type == "R") {
+
+				// }
+				// else if(animationCurveNode.type == "T") {
+
+				// }
+
+				// for(let i = 0; i < Xcurve.)
+
+				
+			}
 		});
 	}
 
