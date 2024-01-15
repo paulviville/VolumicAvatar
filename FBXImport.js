@@ -16,6 +16,8 @@ export default class FBXImporter {
 	#boneById;
 	#deformersById = {};
 	#skinDeformersById = {};
+	#boneNode;
+	#boneInitTransform;
 	cmaps;
 
 	constructor(fbxString) {
@@ -777,7 +779,7 @@ export default class FBXImporter {
 
 	#processSkeleton() {
 		this.#skeleton = new Skeleton;
-
+		this.#boneInitTransform = this.#skeleton.newBoneAttribute("initTransform");
 		this.#boneById = {};
 		// const meshes = {};
 
@@ -808,11 +810,15 @@ export default class FBXImporter {
 				console.log("Lcl Rotation")
 			}
 
-			const transform = DualQuaternion.setFromTranslationRotation(rotation, translation);
 			
 			
 			// this.#skeleton.setLocalTransform(bone, transform);
-			this.#skeleton.addKey(bone, new Key(0, transform));
+
+			this.#boneInitTransform[bone] = {R: rotation, T: translation};
+
+			// tpose keyframe
+			const transform = DualQuaternion.setFromTranslationRotation(rotation, translation);
+			// this.#skeleton.addKey(bone, new Key(-1, transform));
 		});
 
 
@@ -835,7 +841,6 @@ export default class FBXImporter {
 		const connections = this.#connections.OP;
 		const animationCurves = {};
 		const animationCurveNodes = {};
-		const boneAnimationNodes = {};
 
 		this.#objects.animationCurves.forEach(animationCurve => {
 			animationCurves[animationCurve.id] = animationCurve;
@@ -850,42 +855,79 @@ export default class FBXImporter {
 		// find node curves for each axis
 		connections.forEach(connection => {
 			if(animationCurves[connection.childId] && animationCurveNodes[connection.parentId]) {
-				const animationCurve = animationCurves[connection.childId];
 				const axis = connection.propertyName[4]; /// not great
 				const animationCurveNode = animationCurveNodes[connection.parentId];
-				animationCurveNode[axis] = connection.childId;
+				animationCurveNode[axis] = animationCurves[connection.childId];
 			}
 		});
 
 		// attach node to bone
+		this.#boneNode = this.#skeleton.newBoneAttribute("boneNode");
+		const visitedBones = [];
 		connections.forEach(connection => {
-
+			visitedBones[ this.#boneById[connection.parentId]] ??= 1;
 			if(animationCurveNodes[connection.childId] && this.#boneById[connection.parentId] != undefined) {
-			// 	const axis = connection.propertyName[4]; /// not great
 				const animationCurveNode = animationCurveNodes[connection.childId];
 				const bone = this.#boneById[connection.parentId];
-			// 	animationCurveNode[axis] = connection.childId;
-			// 	console.log(axis)
-			// 	console.log(animationCurve)
 				console.log(bone, animationCurveNode)
-				const Xcurve = animationCurves[animationCurveNode.X];
-				const Ycurve = animationCurves[animationCurveNode.Y];
-				const Zcurve = animationCurves[animationCurveNode.Z];
 
-				console.log(Xcurve, Ycurve, Zcurve)
+				this.#boneNode[bone] ??= {};
+				this.#boneNode[bone][animationCurveNode.type] = animationCurveNode;
+			}
+		});
 
-				// if(animationCurveNode.type == "R") {
+		/// create keyframes
+		this.#skeleton.foreachBone(bone => {
+			const node = this.#boneNode[bone];
+			console.log(node, bone)
 
-				// }
-				// else if(animationCurveNode.type == "T") {
+			/// set T-Pose key
+			const initTransform = this.#boneInitTransform[bone];
+			this.#skeleton.addKey(bone, new Key(-1, DualQuaternion.setFromTranslationRotation(initTransform.R, initTransform.T)));
 
-				// }
+			if(node == undefined) 
+				return;
 
-				// for(let i = 0; i < Xcurve.)
 
+
+			const nbFrames = node.R?.X.KeyTime.length ?? node.T?.X.KeyTime.length;
+			
+			// console.log(nbFrames, initTransform, bone)
+
+			for(let i = 0; i < nbFrames; ++i) {
+				const rotation = new Quaternion();
+				if(node.R != undefined) {
+					console.log(node.R.X.KeyValueFloat[i], node.R.Y.KeyValueFloat[i], node.R.Z.KeyValueFloat[i])
+					const eulerRotation = new THREE.Euler(node.R.X.KeyValueFloat[i]*(Math.PI/180), node.R.Y.KeyValueFloat[i]*(Math.PI/180), node.R.Z.KeyValueFloat[i]*(Math.PI/180), 'ZYX');
+					rotation.setFromEuler(eulerRotation);
+					rotation.normalize();
+					rotation.premultiply(initTransform.R)
+				} 
+				else {
+					rotation.copy(initTransform.R);
+				}
+
+				const translation = new Quaternion();
+				if(node.T != undefined) {
+					translation.x = node.T.X.KeyValueFloat[i];
+					translation.y = node.T.Y.KeyValueFloat[i];
+					translation.z = node.T.Z.KeyValueFloat[i];
+					translation.w = 0;
+				} 
+				else {
+					translation.copy(initTransform.T);
+				}
+
+				const transform = DualQuaternion.setFromTranslationRotation(rotation, translation);
+				const timeStamp =  node.R?.X.KeyTime[i] ?? node.T?.X.KeyTime[i];
+				this.#skeleton.addKey(bone, new Key(timeStamp, transform));
 				
 			}
 		});
+
+		console.log(this.#boneNode)
+		console.log(visitedBones)
+		console.log(connections)
 	}
 
 	#skinSkeleton() {

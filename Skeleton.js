@@ -92,6 +92,10 @@ export default function Skeleton () {
 		return bone;
 	}
 
+	this.debug = function() {
+		console.log(keys)
+	}
+
 	this.nbBones = function () {
 		return attributes.nbElements();
 	}

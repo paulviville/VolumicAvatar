@@ -87,18 +87,28 @@ loadFileAsync("./Files/Walking.fbx", function(error, fileText) {
 		cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
 		skeleton = fbxImporter.getSkeleton();
-		skeleton.computeWorldTransforms(0);
+        // skeleton.setBindTransforms();
+		skeleton.computeWorldTransforms(-1);
+        // skeleton.computeOffsets();
 		skeletonRenderer = new SkeletonRenderer(skeleton);
+    	skeletonRenderer.computePositions(-1);
 		skeletonRenderer.createEdges();
 		skeletonRenderer.createVertices();
 		console.log(skeletonRenderer)
 		// skeletonRenderer.vertices(scene)
 		scene.add(skeletonRenderer.vertices)
 		scene.add(skeletonRenderer.edges)
+
+		skeleton.debug()
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
 	}
 })
 
+window.update = function(t) {
+    skeletonRenderer.computePositions(t);
+	skeletonRenderer.updateEdges();
+	skeletonRenderer.updateVertices();
+}
 
 
 
