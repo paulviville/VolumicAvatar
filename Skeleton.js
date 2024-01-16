@@ -153,9 +153,9 @@ export default function Skeleton () {
 		return bindTransforms[bone];
 	}
 
-	this.setBindTransforms = function () {
+	this.setBindTransforms = function (t = 0) {
 		// if(!computedWorldTransforms) {
-			this.computeWorldTransforms(0);
+			this.computeWorldTransforms(t);
 			// computedWorldTransforms = true;
 		// }
 

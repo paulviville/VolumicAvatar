@@ -11,6 +11,7 @@ import { cutAllEdges, quadrangulateAllFaces } from './CMapJS/Utils/Subdivision.j
 import RendererDarts from '../CMapJS/Rendering/RendererDarts.js';
 import FBXImporter from './FBXImport.js';
 
+import { controllers, GUI } from './CMapJS/Libs/dat.gui.module.js';
 
 
 const scene = new THREE.Scene();
@@ -48,12 +49,72 @@ window.camera = function() {
 }
 
 
-
 let cmaps = [];
 let cmapRenderers = [];
 let skeletonRenderer;
 let fbxImporter;
-let skeleton
+let skeleton;
+
+const gui = new GUI({autoPlace: true, hideable: false});
+
+const guiParams = {
+	currentTime: -1,
+	timeRange: {first: undefined, last: undefined},
+	tPose: function() {
+		this.currentTime = -1;
+		this.update();
+	},
+	updateSkeleton: function() {
+		skeletonRenderer.computePositions(this.currentTime);
+		skeleton.computeOffsets()
+		skeletonRenderer.updateEdges();
+		skeletonRenderer.updateVertices();
+	},
+	updateSkin: function() {
+		cmaps.forEach(cmap => {
+			const position = cmap.getAttribute(cmap.vertex, "position");
+			const weights = cmap.getAttribute(cmap.vertex, "weights");
+			const bind = cmap.getAttribute(cmap.vertex, "bind");
+
+			cmap.foreach(cmap.vertex, vd => {
+				const vid = cmap.cell(cmap.vertex, vd);
+				let pb = bind[vid].clone();
+				let dqBlend = new DualQuaternion(new THREE.Quaternion(0,0,0,0), new THREE.Quaternion(0,0,0,0));
+				for(let w = 0; w < weights[vid].length; ++w) {
+					let b = weights[vid][w];
+					let off = skeleton.getOffset(b.b);
+					dqBlend.addScaledDualQuaternion(off, b.w);
+				}
+				dqBlend.normalize();
+				let pdq = DualQuaternion.setFromTranslation(pb);
+				pdq.multiplyDualQuaternions(dqBlend, pdq);
+				position[vid].copy(pdq.transform(new THREE.Vector3));
+			});
+		});
+
+		cmapRenderers.forEach(renderer => {
+			renderer.edges.update()
+		});
+	},
+	update: function() {
+		this.updateSkeleton();
+		this.updateSkin();
+	},
+	loop: false,
+	speed: 1.0,
+	loopFunc: function() {
+		this.currentTime += (this.timeRange.last - this.timeRange.first) / (100/this.speed);
+		this.currentTime *= this.currentTime >= this.timeRange.last ? 0 : 1;
+		this.update();
+	},
+	/// showSkin
+	/// showSkeleton
+	/// vertexSize : skin + skel
+	/// edgeSize : skin + skel
+}
+
+window.skin = guiParams.updateSkin;
+
 
 function loadFileAsync(url, callback) {
 	var xhr = new XMLHttpRequest();
@@ -73,19 +134,21 @@ function loadFileAsync(url, callback) {
 	xhr.send();
 }
 
-loadFileAsync("./Files/Walking.fbx", function(error, fileText) {
+loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 	if(error) {
 
 	} else {
 		fbxImporter = new FBXImporter(fileText);
 		cmaps[0] = fbxImporter.cmaps[0]
-		cmaps[1] = fbxImporter.cmaps[1]
+		// cmaps[1] = fbxImporter.cmaps[1]
 		cmapRenderers[0] = new Renderer(cmaps[0]);
-		cmapRenderers[1] = new Renderer(cmaps[1]);
+		// cmapRenderers[1] = new Renderer(cmaps[1]);
 
 		cmapRenderers[0].edges.create({size: 30, color: 0x0000EE}).addTo(scene)
-		cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
+		// cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
+		// const weights = cmaps[0].getAttribute(cmaps[0].vertex, "weights");
+		// console.log(weights)
 		skeleton = fbxImporter.getSkeleton();
         // skeleton.setBindTransforms();
 		skeleton.computeWorldTransforms(-1);
@@ -100,6 +163,17 @@ loadFileAsync("./Files/Walking.fbx", function(error, fileText) {
 		scene.add(skeletonRenderer.edges)
 
 		skeleton.debug()
+		const timeRange = fbxImporter.timeRange;
+		console.log(timeRange)
+		guiParams.timeRange = fbxImporter.timeRange;
+
+		gui.add(guiParams, "tPose")
+		gui.add(guiParams, "loop")
+		gui.add(guiParams, "speed", 0.01, 2).step(0.01);
+		gui.add(guiParams, "currentTime", guiParams.timeRange.first, guiParams.timeRange.last).onChange(guiParams.update.bind(guiParams));
+		console.log(guiParams)
+
+
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
 	}
 })
@@ -420,6 +494,11 @@ window.updateRenderer = function(t) {
 let frameCount = 0;
 function update (t)
 {
+	if(guiParams.loop) {
+		guiParams.loopFunc();
+
+
+	}
 	// let s = 100 * (Math.sin(t / 1000) / 2 + 0.5);
 	// sRenderer.computePositions(s);
 	// skeleton.computeOffsets()

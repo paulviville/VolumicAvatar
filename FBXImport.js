@@ -20,6 +20,8 @@ export default class FBXImporter {
 	#boneInitTransform;
 	cmaps;
 
+	timeRange = {first: undefined, last: undefined};
+
 	constructor(fbxString) {
 		this.#fbxString = fbxString;
 		this.#clean();
@@ -562,15 +564,25 @@ export default class FBXImporter {
 					break;
 				case "KeyTime":
 					++i;
-					animationCurve.KeyTime = this.#lines[i].split(":")[1];
-					animationCurve.KeyTime = animationCurve.KeyTime.split(",");
-					animationCurve.KeyTime = animationCurve.KeyTime.map(kt => parseInt(kt));
+					let times = "";
+					while (!this.#lines[i].includes('}')) {
+						times += this.#lines[i];
+						++i;
+					}
+					animationCurve.KeyTime = times.split(":")[1].split(",");
+					animationCurve.KeyTime = animationCurve.KeyTime.map(x => parseInt(x));
+
 					break;
 				case "KeyValueFloat":
 					++i;
-					animationCurve.KeyValueFloat = this.#lines[i].split(":")[1];
-					animationCurve.KeyValueFloat = animationCurve.KeyValueFloat.split(",");
-					animationCurve.KeyValueFloat = animationCurve.KeyValueFloat.map(kf => parseFloat(kf));
+					let values = "";
+					while (!this.#lines[i].includes('}')) {
+						values += this.#lines[i];
+						++i;
+					}
+					animationCurve.KeyValueFloat = values.split(":")[1].split(",");
+					animationCurve.KeyValueFloat = animationCurve.KeyValueFloat.map(x => parseInt(x));
+
 					break;
 				case "KeyAttrFlags":
 					++i;
@@ -622,7 +634,9 @@ export default class FBXImporter {
 			if (this.#lines[i].includes("P:")) {
 				let line = this.#lines[i].split(":")[1].split(",");
 				let axis = line.shift().trim()[3];
-				let value = parseFloat(line.pop())
+				/// skip value
+				// let value = parseFloat(line.pop());
+				let value = undefined;
 				animationCurveNode[axis] = value;
 			}
 			
@@ -799,6 +813,15 @@ export default class FBXImporter {
 				rotation.setFromEuler(eulerRotation);
 				rotation.normalize();
 			}
+
+			const lclrotation = new Quaternion;
+
+			if(model.properties["Lcl Rotation"]) {
+				const eulerRotation = new THREE.Euler().fromArray([...(model.properties["Lcl Rotation"].map(angle => angle*Math.PI/180)), 'ZYX']);
+				lclrotation.setFromEuler(eulerRotation);
+				lclrotation.normalize();
+				rotation.multiply(lclrotation)
+			}
 			
 			const vTranslation = new THREE.Vector3();
 			if(model.properties["Lcl Translation"]) {
@@ -806,9 +829,7 @@ export default class FBXImporter {
 			}
 			const translation = new Quaternion(vTranslation.x, vTranslation.y, vTranslation.z, 0);
 
-			if(model.properties["Lcl Rotation"]) {
-				console.log("Lcl Rotation")
-			}
+
 
 			
 			
@@ -888,16 +909,19 @@ export default class FBXImporter {
 			if(node == undefined) 
 				return;
 
-
+			/// skip connections with no curves
+			if((node.R?.X || node.R?.Y || node.R?.Z || node.T?.X || node.T?.Y || node.T?.Z) == undefined)
+				return;
 
 			const nbFrames = node.R?.X.KeyTime.length ?? node.T?.X.KeyTime.length;
-			
+			this.timeRange.first ??= node.R?.X.KeyTime[0] ?? node.T?.X.KeyTime[0];
+			this.timeRange.last ??= node.R?.X.KeyTime[node.R.X.KeyTime.length -1] ?? node.T?.X.KeyTime[node.T.X.KeyTime.length-1];
+			console.log(this.timeRange)
 			// console.log(nbFrames, initTransform, bone)
 
 			for(let i = 0; i < nbFrames; ++i) {
 				const rotation = new Quaternion();
 				if(node.R != undefined) {
-					console.log(node.R.X.KeyValueFloat[i], node.R.Y.KeyValueFloat[i], node.R.Z.KeyValueFloat[i])
 					const eulerRotation = new THREE.Euler(node.R.X.KeyValueFloat[i]*(Math.PI/180), node.R.Y.KeyValueFloat[i]*(Math.PI/180), node.R.Z.KeyValueFloat[i]*(Math.PI/180), 'ZYX');
 					rotation.setFromEuler(eulerRotation);
 					rotation.normalize();
@@ -931,11 +955,19 @@ export default class FBXImporter {
 	}
 
 	#skinSkeleton() {
+		this.#skeleton.setBindTransforms(-1);
+		// skeleton.computeOffsets();
+
 		this.#cmaps.forEach(cmap => {
 			const weights = cmap.addAttribute(cmap.vertex, "weights");
+			const bind = cmap.addAttribute(cmap.vertex, "bind");
+			const position = cmap.getAttribute(cmap.vertex, "position");
 			cmap.foreach(cmap.vertex, vd => {
 				weights[cmap.cell(cmap.vertex, vd)] = [];
+				bind[cmap.cell(cmap.vertex, vd)] = position[cmap.cell(cmap.vertex, vd)].clone();
 			});
+
+			console.log(bind, weights)
 		})
 
 		const skinsToGeometry = {};
@@ -968,19 +1000,10 @@ export default class FBXImporter {
 				return;
 			}
 		});
+
 	}
 
 	getSkeleton() {
 		return this.#skeleton;		
 	}
-
-	// static async readFile(filePath) {
-	// 	const xhttp = new XMLHttpRequest();
-	// 	xhttp.onreadystatechange = function () {
-	// 		if(this.status == 200)
-	// 			return new FBXImporter(this.responseText);
-	// 	}
-	// 	xhttp.open("GET", filePath, false);
-	// 	xhttp.send();
-	// }
 }
