@@ -134,7 +134,7 @@ function loadFileAsync(url, callback) {
 	xhr.send();
 }
 
-loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
+loadFileAsync("./Files/skinTest.fbx", function(error, fileText) {
 	if(error) {
 
 	} else {
@@ -170,8 +170,9 @@ loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 		gui.add(guiParams, "tPose")
 		gui.add(guiParams, "loop")
 		gui.add(guiParams, "speed", 0.01, 2).step(0.01);
-		gui.add(guiParams, "currentTime", guiParams.timeRange.first, guiParams.timeRange.last).onChange(guiParams.update.bind(guiParams));
+		gui.add(guiParams, "currentTime", guiParams.timeRange.first, guiParams.timeRange.last).onChange(guiParams.update.bind(guiParams)).listen();
 		console.log(guiParams)
+		
 
 
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
