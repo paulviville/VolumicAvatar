@@ -12,6 +12,7 @@ import RendererDarts from '../CMapJS/Rendering/RendererDarts.js';
 import FBXImporter from './FBXImport.js';
 
 import { controllers, GUI } from './CMapJS/Libs/dat.gui.module.js';
+import { CMap2 } from './CMapJS/CMap/CMap.js';
 
 
 const scene = new THREE.Scene();
@@ -68,7 +69,7 @@ const guiParams = {
 		skeletonRenderer.computePositions(this.currentTime);
 		skeleton.computeOffsets()
 		skeletonRenderer.updateEdges();
-		skeletonRenderer.updateVertices();
+		// skeletonRenderer.updateVertices();
 	},
 	updateSkin: function() {
 		cmaps.forEach(cmap => {
@@ -93,7 +94,7 @@ const guiParams = {
 		});
 
 		cmapRenderers.forEach(renderer => {
-			renderer.edges.update()
+			renderer.vertices.update()
 		});
 	},
 	update: function() {
@@ -115,6 +116,211 @@ const guiParams = {
 
 window.skin = guiParams.updateSkin;
 
+const X = new THREE.Vector3(1, 0, 0);
+const Y = new THREE.Vector3(0, 1, 0);
+const Z = new THREE.Vector3(0, 0, 1);
+
+const scaffold = new CMap2();
+scaffold.createEmbedding(scaffold.vertex);
+const scaffoldPosition = scaffold.addAttribute(scaffold.vertex, "position");
+const scaffoldRenderer = new Renderer(scaffold);
+
+window.testScaffold = function() {
+
+	skeleton.debug()
+	const hips = skeleton.getBone("Hips");
+	const rightUpLeg = skeleton.getBone("RightUpLeg");
+	const rightLeg = skeleton.getBone("RightLeg");
+	const rightFoot = skeleton.getBone("RightFoot");
+	const rightToeBase = skeleton.getBone("RightToeBase");
+	const rightToe_End = skeleton.getBone("RightToe_End");
+	const rightShoulder = skeleton.getBone("RightShoulder");
+	const leftUpLeg = skeleton.getBone("LeftUpLeg");
+	const leftLeg = skeleton.getBone("LeftLeg");
+	const leftFoot = skeleton.getBone("LeftFoot");
+	const spine = skeleton.getBone("Spine");
+	const spine1 = skeleton.getBone("Spine1");
+	const spine2 = skeleton.getBone("Spine2");
+	const neck = skeleton.getBone("Neck");
+
+
+	const sphereGeometry = new THREE.SphereBufferGeometry(3, 10, 10);
+	const sphereMaterial = new THREE.MeshLambertMaterial({color: 0x0000FF});
+	const rightUpSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+	rightUpSphere.position.copy(skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3))
+	const spineSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+	spineSphere.position.copy(skeleton.getWorldTransform(rightShoulder).transform(new THREE.Vector3))
+	// scene.add(rightUpSphere)
+	// scene.add(spineSphere)
+
+	/// hips
+	const hipsPosition = skeleton.getWorldTransform(hips).transform(new THREE.Vector3);
+	let fd0 = scaffold.addFace(8);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = hipsPosition.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = hipsPosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = hipsPosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = hipsPosition.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = hipsPosition.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = hipsPosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = hipsPosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = hipsPosition.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, -5);
+
+	/// spine
+	const spinePosition = skeleton.getWorldTransform(spine).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(8);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spinePosition.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spinePosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = spinePosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = spinePosition.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = spinePosition.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = spinePosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = spinePosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spinePosition.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, -5);
+
+	/// spine1
+	const spine1Position = skeleton.getWorldTransform(spine1).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(8);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine1Position.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spine1Position.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = spine1Position.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = spine1Position.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = spine1Position.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = spine1Position.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = spine1Position.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine1Position.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, -5);
+
+	/// spine2
+	const spine2Position = skeleton.getWorldTransform(spine2).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(8);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine2Position.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spine2Position.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = spine2Position.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = spine2Position.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = spine2Position.clone()
+		.addScaledVector(X, -10).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = spine2Position.clone()
+		.addScaledVector(X, -3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = spine2Position.clone()
+		.addScaledVector(X, 3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
+		.addScaledVector(X, 10).addScaledVector(Z, -5);
+
+	/// rightUpLeg
+	const rightUpLegPosition = skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+
+	/// neck
+	const neckPosition = skeleton.getWorldTransform(neck).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = neckPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = neckPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = neckPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = neckPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+	/// rightLeg
+	const rightLegPosition = skeleton.getWorldTransform(rightLeg).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightLegPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightLegPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightLegPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightLegPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+	/// rightFoot
+	const rightFootPosition = skeleton.getWorldTransform(rightFoot).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightFootPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightFootPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightFootPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightFootPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Z, -2);
+
+	/// rightToeBase
+	const rightToeBasePosition = skeleton.getWorldTransform(rightToeBase).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightToeBasePosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Y, 1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightToeBasePosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, 1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightToeBasePosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightToeBasePosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Y, -1);
+
+	/// rightToe_End
+	const rightToe_EndPosition = skeleton.getWorldTransform(rightToe_End).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightToe_EndPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Y, 1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightToe_EndPosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Y, 1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightToe_EndPosition.clone()
+		.addScaledVector(X, -3).addScaledVector(Y, -1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightToe_EndPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Y, -1).addScaledVector(Z, -2);
+
+	/// rightShoulder
+	const rightShoulderPosition = skeleton.getWorldTransform(rightShoulder).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightShoulderPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightShoulderPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightShoulderPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightShoulderPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -3).addScaledVector(Z, 2);
+
+	scaffoldRenderer.vertices.create({size: 0.5, color: new THREE.Color(0x00FF00)}).addTo(scene);
+	scaffoldRenderer.edges.create({size: 80, color: new THREE.Color(0x00FF00)}).addTo(scene);
+
+}
 
 function loadFileAsync(url, callback) {
 	var xhr = new XMLHttpRequest();
@@ -134,7 +340,7 @@ function loadFileAsync(url, callback) {
 	xhr.send();
 }
 
-loadFileAsync("./Files/skinTest.fbx", function(error, fileText) {
+loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 	if(error) {
 
 	} else {
@@ -144,7 +350,7 @@ loadFileAsync("./Files/skinTest.fbx", function(error, fileText) {
 		cmapRenderers[0] = new Renderer(cmaps[0]);
 		// cmapRenderers[1] = new Renderer(cmaps[1]);
 
-		cmapRenderers[0].edges.create({size: 30, color: 0x0000EE}).addTo(scene)
+		cmapRenderers[0].vertices.create({size: 0.125}).addTo(scene)
 		// cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
 		// const weights = cmaps[0].getAttribute(cmaps[0].vertex, "weights");
@@ -156,10 +362,10 @@ loadFileAsync("./Files/skinTest.fbx", function(error, fileText) {
 		skeletonRenderer = new SkeletonRenderer(skeleton);
     	skeletonRenderer.computePositions(-1);
 		skeletonRenderer.createEdges();
-		skeletonRenderer.createVertices();
+		// skeletonRenderer.createVertices();
 		console.log(skeletonRenderer)
 		// skeletonRenderer.vertices(scene)
-		scene.add(skeletonRenderer.vertices)
+		// scene.add(skeletonRenderer.vertices)
 		scene.add(skeletonRenderer.edges)
 
 		skeleton.debug()
@@ -173,7 +379,7 @@ loadFileAsync("./Files/skinTest.fbx", function(error, fileText) {
 		gui.add(guiParams, "currentTime", guiParams.timeRange.first, guiParams.timeRange.last).onChange(guiParams.update.bind(guiParams)).listen();
 		console.log(guiParams)
 		
-
+		window.testScaffold()
 
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
 	}
@@ -188,296 +394,6 @@ window.update = function(t) {
 
 
 
-// const worldUp = new THREE.Vector3(0, 0, 1);
-// const worldY = new THREE.Vector3(0, 1, 0);
-
-
-// const translation = new THREE.Quaternion(0, 0.1, 0, 0);
-// const translation1 = new THREE.Quaternion(0, 0.1, 0, 0);
-
-
-// const rotation = new THREE.Quaternion().setFromAxisAngle(worldY, Math.PI / 3);
-// const transform = DualQuaternion.setFromRotationTranslation(rotation.clone(), translation.clone());
-// transform.normalize();
-// const key0 = new Key(0, transform);
-
-
-// // const rotation1 = new THREE.Quaternion().setFromAxisAngle(worldUp, Math.PI / 3);
-// const rotation1 = new THREE.Quaternion().setFromAxisAngle(worldUp, 0);
-// const transform1 = DualQuaternion.setFromRotationTranslation(rotation1.clone(), translation1.clone());
-// transform1.normalize();
-// const key1 = new Key(100, transform1);
-
-
-// const translationroot = new THREE.Quaternion(0, 0, 0, 0);
-// const transformRoot = DualQuaternion.setFromRotationTranslation(new THREE.Quaternion, translationroot)
-// const keyroot = new Key(100, transformRoot);
-
-
-
-
-// const skeleton = new Skeleton;
-// const root = skeleton.newBone("root");
-// skeleton.addKey(root, keyroot);
-// const bone0 = skeleton.newBone();
-// skeleton.setParent(bone0, root);
-// skeleton.addKey(bone0, key0);
-// const bone1 = skeleton.newBone();
-// skeleton.setParent(bone1, bone0);
-// skeleton.addKey(bone1, key0);
-// const bone2 = skeleton.newBone();
-// skeleton.setParent(bone2, bone1);
-// skeleton.addKey(bone2, key0);
-// skeleton.addKey(bone2, key1);
-// const bone3 = skeleton.newBone();
-// skeleton.setParent(bone3, bone2);
-// skeleton.addKey(bone3, key0);
-
-// skeleton.addKey(bone0, key1);
-// skeleton.addKey(bone1, key1);
-// skeleton.addKey(bone3, key1);
-
-
-// skeleton.setBindTransforms();
-// skeleton.computeWorldTransforms(0);
-// skeleton.computeOffsets();
-
-// const sRenderer = new SkeletonRenderer(skeleton);
-// sRenderer.createVertices();
-// sRenderer.createEdges();
-// scene.add(sRenderer.vertices)
-// scene.add(sRenderer.edges)
-
-
-
-
-// const skin = new IncidenceGraph;
-// skin.createEmbedding(skin.vertex);
-// const skinPos = skin.addAttribute(skin.vertex, "position");
-// const skinBind = skin.addAttribute(skin.vertex, "bind");
-// const skinWeights = skin.addAttribute(skin.vertex, "weights");
-
-
-// const weights = [
-// 	[{b: 0, w: 0.5}, {b: 1, w: 0.5}],
-// 	[{b: 0, w: 0.25}, {b: 1, w: 0.5}, {b: 2, w: 0.25}],
-// 	[{b: 1, w: 0.5}, {b: 2, w: 0.5}],
-// 	[{b: 1, w: 0.25}, {b: 2, w: 0.5}, {b: 3, w: 0.25}],
-// 	[{b: 2, w: 0.5}, {b: 3, w: 0.5}],
-// 	[{b: 2, w: 0.25}, {b: 3, w: 0.5}, {b: 4, w: 0.25}],
-// 	[{b: 3, w: 0.5}, {b: 4, w: 0.5}],
-// 	[{b: 3, w: 0.25}, {b: 4, w: 0.75}],
-// 	[{b: 4, w: 1}]
-// ]
-
-// const weights = [
-// 	[{b: 0, w: 0.5}, {b: 1, w: 0.5}],
-// 	[{b: 1, w: 0.5}, {b: 2, w: 0.5}],
-// 	[{b: 2, w: 0.5}, {b: 3, w: 0.5}],
-// 	[{b: 3, w: 0.5}, {b: 4, w: 0.5}],
-// 	[{b: 4, w: 1}]
-// ]
-
-// const upVector = new THREE.Vector3(0, 0.1, 0);
-// const radiusVector = new THREE.Vector3(0.05, 0, 0.05);
-
-// const nbVerts = 4;
-// const angle = 2*Math.PI/nbVerts;
-
-// for(let w = 0; w < weights.length; ++w) {
-// 	const tempVector = radiusVector.clone();
-// 	tempVector.addScaledVector(upVector, w);
-
-// 	for(let i = 0; i < nbVerts; ++i){
-// 		let id = skin.addVertex();
-// 		if(i != 0) skin.addEdge(id, id - 1);
-// 		if(i == nbVerts - 1) skin.addEdge(id, id - i);
-// 		if(w > 0) skin.addEdge(id, id - nbVerts);
-		
-// 		skinPos[id] = tempVector.clone();
-// 		skinBind[id] = skinPos[id].clone();
-// 		skinWeights[id] = weights[w];
-		
-// 		tempVector.applyAxisAngle(worldY, angle);
-// 	}
-// }
-
-// const skinRenderer = new Renderer(skin);
-// skinRenderer.vertices.create();
-// skinRenderer.vertices.addTo(scene)
-// skinRenderer.edges.create({color: new THREE.Color(0x550000)});
-// skinRenderer.edges.addTo(scene)
-
-
-
-
-
-
-// const hexMesh = new CMap3;
-// const dh0 = hexMesh.addPrism(4, false);
-// const dh1 = hexMesh.addPrism(4, false);
-// const dh2 = hexMesh.addPrism(4, false);
-// const dh3 = hexMesh.addPrism(4, false);
-
-// const dh0_ = hexMesh.phi([2,1,1,2], dh0);
-// const dh1_ = hexMesh.phi([2,1,1,2], dh1);
-// const dh2_ = hexMesh.phi([2,1,1,2], dh2);
-// const dh3_ = hexMesh.phi([2,1,1,2], dh3);
-
-// let d0 = dh0; let d0_ = dh0_;
-// let d1 = dh1; let d1_ = dh1_;
-// let d2 = dh2; let d2_ = dh2_;
-// let d3 = dh3; let d3_ = dh3_;
-
-// for(let i = 0; i < 4; ++i) {
-// 	hexMesh.sewPhi3(d0_, d1);
-// 	hexMesh.sewPhi3(d1_, d2);
-// 	hexMesh.sewPhi3(d2_, d3);
-
-// 	d0_ = hexMesh.phi1[d0_];
-// 	d1_ = hexMesh.phi1[d1_];
-// 	d2_ = hexMesh.phi1[d2_];
-// 	d1 = hexMesh.phi_1[d1];
-// 	d2 = hexMesh.phi_1[d2];
-// 	d3 = hexMesh.phi_1[d3];
-// }
-
-// hexMesh.close();
-// hexMesh.setEmbeddings(hexMesh.vertex);
-// hexMesh.setEmbeddings(hexMesh.volume);
-
-// hexMesh.foreach(hexMesh.volume, wd => {
-// 	console.log(hexMesh.cell(hexMesh.volume, wd))
-// })
-
-// const hexPos = hexMesh.addAttribute(hexMesh.vertex, "position");
-// const hexBind = hexMesh.addAttribute(hexMesh.vertex, "bind");
-// const hexWeight =  hexMesh.addAttribute(hexMesh.vertex, "weight");
-
-// d0 = dh0; d1 = dh1; d2 = dh2; d3 = dh3; d3_ = hexMesh.phi1[dh3_];
-// hexPos[hexMesh.cell(hexMesh.vertex, d0)] = new THREE.Vector3(-0.05, 0, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d1)] = new THREE.Vector3(-0.05, 0.1, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d2)] = new THREE.Vector3(-0.05, 0.2, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3)] = new THREE.Vector3(-0.05, 0.3, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3_)] = new THREE.Vector3(-0.05, 0.4, -0.05)
-
-// hexWeight[hexMesh.cell(hexMesh.vertex, d0)] = [{b: 0, w: 0.5}, {b: 1, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d1)] = [{b: 1, w: 0.5}, {b: 2, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d2)] = [{b: 2, w: 0.5}, {b: 3, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3)] = [{b: 3, w: 0.5}, {b: 4, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3_)] = [{b: 4, w: 1}];
-
-
-// d0 = hexMesh.phi1[d0]; d1 = hexMesh.phi1[d1]; d2 = hexMesh.phi1[d2];
-// d3 = hexMesh.phi1[d3]; d3_ = hexMesh.phi_1[d3_];
-// hexPos[hexMesh.cell(hexMesh.vertex, d0)] = new THREE.Vector3(0.05, 0, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d1)] = new THREE.Vector3(0.05, 0.1, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d2)] = new THREE.Vector3(0.05, 0.2, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3)] = new THREE.Vector3(0.05, 0.3, -0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3_)] = new THREE.Vector3(0.05, 0.4, -0.05)
-
-// hexWeight[hexMesh.cell(hexMesh.vertex, d0)] = [{b: 0, w: 0.5}, {b: 1, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d1)] = [{b: 1, w: 0.5}, {b: 2, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d2)] = [{b: 2, w: 0.5}, {b: 3, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3)] = [{b: 3, w: 0.5}, {b: 4, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3_)] = [{b: 4, w: 1}];
-
-
-// d0 = hexMesh.phi1[d0]; d1 = hexMesh.phi1[d1]; d2 = hexMesh.phi1[d2];
-// d3 = hexMesh.phi1[d3]; d3_ = hexMesh.phi_1[d3_];
-// hexPos[hexMesh.cell(hexMesh.vertex, d0)] = new THREE.Vector3(0.05, 0, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d1)] = new THREE.Vector3(0.05, 0.1, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d2)] = new THREE.Vector3(0.05, 0.2, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3)] = new THREE.Vector3(0.05, 0.3, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3_)] = new THREE.Vector3(0.05, 0.4, 0.05)
-
-// hexWeight[hexMesh.cell(hexMesh.vertex, d0)] = [{b: 0, w: 0.5}, {b: 1, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d1)] = [{b: 1, w: 0.5}, {b: 2, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d2)] = [{b: 2, w: 0.5}, {b: 3, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3)] = [{b: 3, w: 0.5}, {b: 4, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3_)] = [{b: 4, w: 1}];
-
-
-// d0 = hexMesh.phi1[d0]; d1 = hexMesh.phi1[d1]; d2 = hexMesh.phi1[d2];
-// d3 = hexMesh.phi1[d3]; d3_ = hexMesh.phi_1[d3_];
-// hexPos[hexMesh.cell(hexMesh.vertex, d0)] = new THREE.Vector3(-0.05, 0, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d1)] = new THREE.Vector3(-0.05, 0.1, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d2)] = new THREE.Vector3(-0.05, 0.2, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3)] = new THREE.Vector3(-0.05, 0.3, 0.05)
-// hexPos[hexMesh.cell(hexMesh.vertex, d3_)] = new THREE.Vector3(-0.05, 0.4, 0.05)
-
-// hexWeight[hexMesh.cell(hexMesh.vertex, d0)] = [{b: 0, w: 0.5}, {b: 1, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d1)] = [{b: 1, w: 0.5}, {b: 2, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d2)] = [{b: 2, w: 0.5}, {b: 3, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3)] = [{b: 3, w: 0.5}, {b: 4, w: 0.5}];
-// hexWeight[hexMesh.cell(hexMesh.vertex, d3_)] = [{b: 4, w: 1}];
-
-
-
-
-
-
-
-// hexMesh.foreachDart(d => {
-// 	console.log(d, hexMesh.phi1[d], hexMesh.phi2[d], hexMesh.phi3[d])
-// })
-
-// hexMesh.foreach(hexMesh.vertex, vd => {
-// 	const vid = hexMesh.cell(hexMesh.vertex, vd)
-// 	hexBind[vid] = hexPos[vid].clone();	
-// })
-
-// console.log(hexMesh.nbCells(hexMesh.vertex))
-// console.log(hexMesh.nbCells(hexMesh.volume))
-// console.log(hexMesh.nbCells(hexMesh.edge))
-
-
-// function divideHex()
-
-// let hexMesh2 = new CMap3();
-// const hexPos2 = hexMesh2.addAttribute(hexMesh2.vertex, "position");
-// let dh20 = hexMesh2.addPrism(4, false);
-// hexMesh2.close();
-// hexMesh2.setEmbeddings(hexMesh2.vertex);
-// hexMesh2.setEmbeddings(hexMesh2.volume);
-
-
-
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(-0.05, 0, -0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(0.05, 0, -0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(0.05, 0, 0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(-0.05, 0, 0.05)
-
-// dh20 = hexMesh2.phi([2, 1, 1, 2], dh20);
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(-0.05, 0.1, -0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(-0.05, 0.1, 0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(0.05, 0.1, 0.05)
-// dh20 = hexMesh2.phi1[dh20];
-// hexPos2[hexMesh2.cell(hexMesh2.vertex, dh20)] = new THREE.Vector3(0.05, 0.1, -0.05)
-
-
-
-
-// const hexRenderer2 = new RendererDarts(hexMesh2);
-// hexRenderer2.volumes.create({color: 0x7777BB}).rescale(0.9);
-// hexRenderer2.volumes.addTo(scene)
-// hexRenderer2.vertices.create();
-// hexRenderer2.vertices.addTo(scene)
-
-
-// const hexRenderer = new Renderer(hexMesh);
-// hexRenderer.vertices.create({size: 0.00125});
-// hexRenderer.vertices.addTo(scene)
-// hexRenderer.edges.create({size: 0.125});
-// hexRenderer.edges.addTo(scene)
-// hexRenderer.volumes.create({color: 0x7777BB}).rescale(0.9);
-// hexRenderer.volumes.addTo(scene)
-
 
 
 const grid = new THREE.GridHelper(1000, 25)
@@ -488,8 +404,6 @@ scene.add(grid)
 
 
 window.updateRenderer = function(t) {
-	// sRenderer.computePositions(t);
-	// sRenderer.updateVertices();
 }
 
 let frameCount = 0;
@@ -500,48 +414,6 @@ function update (t)
 
 
 	}
-	// let s = 100 * (Math.sin(t / 1000) / 2 + 0.5);
-	// sRenderer.computePositions(s);
-	// skeleton.computeOffsets()
-	// sRenderer.updateVertices();
-	// sRenderer.updateEdges();
-
-	// skin.foreach(skin.vertex, v => {
-	// 	let pb = skinBind[v].clone();
-	// 	let dqBlend = new DualQuaternion(new THREE.Quaternion(0,0,0,0), new THREE.Quaternion(0,0,0,0));
-	// 	for(let w = 0; w < skinWeights[v].length; ++w) {
-	// 		let b = skinWeights[v][w];
-	// 		let off = skeleton.getOffset(b.b);
-	// 		dqBlend.addScaledDualQuaternion(off, b.w);
-	// 	}
-	// 	dqBlend.normalize();
-	// 	let pdq = DualQuaternion.setFromTranslation(pb);
-	// 	pdq.multiplyDualQuaternions(dqBlend, pdq)
-
-	// 	skinPos[v].copy(pdq.transform(new THREE.Vector3));
-
-	// });
-	// skinRenderer.vertices.update();
-	// skinRenderer.edges.update();
-
-	// hexMesh.foreach(hexMesh.vertex, vd => {
-	// 	const vid = hexMesh.cell(hexMesh.vertex, vd);
-
-	// 	const dqBlend = new DualQuaternion(new THREE.Quaternion(0,0,0,0), new THREE.Quaternion(0,0,0,0));
-	// 	for(let w = 0; w < hexWeight[vid].length; ++w) {
-	// 		let b = hexWeight[vid][w];
-	// 		let off = skeleton.getOffset(b.b);
-	// 		dqBlend.addScaledDualQuaternion(off, b.w);
-	// 	}
-	// 	dqBlend.normalize();
-	// 	const pdq = DualQuaternion.setFromTranslation(hexBind[vid]);
-	// 	pdq.multiplyDualQuaternions(dqBlend, pdq)
-		
-	// 	hexPos[vid].copy(pdq.transform(new THREE.Vector3))
-	// });
-
-	// hexRenderer.vertices.update()
-	// hexRenderer.edges.update()
 }
 
 function render()
@@ -554,8 +426,6 @@ function mainloop(t)
     update(t);
     render();
 	requestAnimationFrame(mainloop);
-	// console.log((1)/((t - prevT)/1000))
-	// prevT = t
 }
 
 mainloop(0);

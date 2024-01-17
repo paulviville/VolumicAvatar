@@ -72,10 +72,7 @@ export default function Skeleton () {
 		bones.forEach(bone => func(bone));
 	}
 
-	const labelDictionary = {};
-	function getBoneFromLabel (label) {
-		return labelDictionary[label];
-	}
+
 
 	this.newBone = function (label) {
 	// this.newBone = function (label, parentLabel, localTransform) {
@@ -94,6 +91,13 @@ export default function Skeleton () {
 
 	this.debug = function() {
 		console.log(keys)
+		console.log(labels)
+		console.log(labelDictionary)
+	}
+
+	const labelDictionary = {};
+	this.getBone = function (label) {
+		return labelDictionary[label];
 	}
 
 	this.nbBones = function () {
@@ -225,7 +229,7 @@ export function SkeletonRenderer (skeleton) {
 	}
 
 	this.updateVertices = function () {
-		const size = 3;
+		const size = 1.5;
 		const scale = new THREE.Vector3(size, size, size);
 		skeleton.foreachBone(bone => {
 			const id = this.vertices.instanceId[bone];
@@ -269,7 +273,7 @@ export function SkeletonRenderer (skeleton) {
 					0, 0, 0, 1]).transpose();
 
 				matrix.decompose(pos, quat, scale);
-				scale.set(1, len, 1);
+				scale.set(Math.min(len / 20, 0.75), len, Math.min(len / 20, 0.75));
 				pos.addVectors(p[0], p[1]).divideScalar(2);
 				matrix.compose(pos, quat, scale);
 
@@ -306,7 +310,8 @@ export function SkeletonRenderer (skeleton) {
 					0, 0, 0, 1]).transpose();
 
 				matrix.decompose(pos, quat, scale);
-				scale.set(1, len, 1);
+				scale.set(Math.min(len / 20, 0.75), len, Math.min(len / 20, 0.75));
+				// scale.set(1, len, 1);
 				pos.addVectors(p[0], p[1]).divideScalar(2);
 				matrix.compose(pos, quat, scale);
 
