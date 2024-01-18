@@ -16,7 +16,7 @@ import { CMap2 } from './CMapJS/CMap/CMap.js';
 
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xeeeeee);
+scene.background = new THREE.Color(0xffffff);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000.0);
 camera.position.set(0, 200, 250);
 // camera.position.set(10, 10.5, 11.5);
@@ -127,35 +127,47 @@ const scaffoldRenderer = new Renderer(scaffold);
 
 window.testScaffold = function() {
 
+	const boneScaffold = skeleton.newBoneAttribute("scaffold");
+
 	skeleton.debug()
 	const hips = skeleton.getBone("Hips");
+	const spine = skeleton.getBone("Spine");
+	const spine1 = skeleton.getBone("Spine1");
+	const spine2 = skeleton.getBone("Spine2");
+	const neck = skeleton.getBone("Neck");
+	const head = skeleton.getBone("Head");
+
 	const rightUpLeg = skeleton.getBone("RightUpLeg");
 	const rightLeg = skeleton.getBone("RightLeg");
 	const rightFoot = skeleton.getBone("RightFoot");
 	const rightToeBase = skeleton.getBone("RightToeBase");
 	const rightToe_End = skeleton.getBone("RightToe_End");
-	const rightShoulder = skeleton.getBone("RightShoulder");
+	const rightArm = skeleton.getBone("RightArm");
+	const rightForeArm = skeleton.getBone("RightForeArm");
+	const rightHand = skeleton.getBone("RightHand");
+
 	const leftUpLeg = skeleton.getBone("LeftUpLeg");
 	const leftLeg = skeleton.getBone("LeftLeg");
 	const leftFoot = skeleton.getBone("LeftFoot");
-	const spine = skeleton.getBone("Spine");
-	const spine1 = skeleton.getBone("Spine1");
-	const spine2 = skeleton.getBone("Spine2");
-	const neck = skeleton.getBone("Neck");
+	const leftToeBase = skeleton.getBone("LeftToeBase");
+	const leftToe_End = skeleton.getBone("LeftToe_End");
+	const leftArm = skeleton.getBone("LeftArm");
+	const leftForeArm = skeleton.getBone("LeftForeArm");
+	const leftHand = skeleton.getBone("LeftHand");
 
-
-	const sphereGeometry = new THREE.SphereBufferGeometry(3, 10, 10);
-	const sphereMaterial = new THREE.MeshLambertMaterial({color: 0x0000FF});
-	const rightUpSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-	rightUpSphere.position.copy(skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3))
-	const spineSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-	spineSphere.position.copy(skeleton.getWorldTransform(rightShoulder).transform(new THREE.Vector3))
-	// scene.add(rightUpSphere)
-	// scene.add(spineSphere)
+	// const sphereGeometry = new THREE.SphereBufferGeometry(3, 10, 10);
+	// const sphereMaterial = new THREE.MeshLambertMaterial({color: 0x0000FF});
+	// const rightUpSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+	// rightUpSphere.position.copy(skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3))
+	// const spineSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+	// spineSphere.position.copy(skeleton.getWorldTransform(head).transform(new THREE.Vector3))
+	// // scene.add(rightUpSphere)
+	// // scene.add(spineSphere)
 
 	/// hips
 	const hipsPosition = skeleton.getWorldTransform(hips).transform(new THREE.Vector3);
 	let fd0 = scaffold.addFace(8);
+	boneScaffold[hips] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = hipsPosition.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = hipsPosition.clone()
@@ -176,6 +188,7 @@ window.testScaffold = function() {
 	/// spine
 	const spinePosition = skeleton.getWorldTransform(spine).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(8);
+	boneScaffold[spine] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spinePosition.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spinePosition.clone()
@@ -196,6 +209,7 @@ window.testScaffold = function() {
 	/// spine1
 	const spine1Position = skeleton.getWorldTransform(spine1).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(8);
+	boneScaffold[spine1] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine1Position.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spine1Position.clone()
@@ -216,38 +230,56 @@ window.testScaffold = function() {
 	/// spine2
 	const spine2Position = skeleton.getWorldTransform(spine2).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(8);
+	boneScaffold[spine2] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine2Position.clone()
-		.addScaledVector(X, 10).addScaledVector(Z, 5);
+		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spine2Position.clone()
-		.addScaledVector(X, 3).addScaledVector(Z, 5);
+		.addScaledVector(X, 5).addScaledVector(Y, 3).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = spine2Position.clone()
-		.addScaledVector(X, -3).addScaledVector(Z, 5);
+		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = spine2Position.clone()
-		.addScaledVector(X, -10).addScaledVector(Z, 5);
+		.addScaledVector(X, -14).addScaledVector(Y, 3).addScaledVector(Z, 5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = spine2Position.clone()
-		.addScaledVector(X, -10).addScaledVector(Z, -5);
+		.addScaledVector(X, -14).addScaledVector(Y, 3).addScaledVector(Z, -5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = spine2Position.clone()
-		.addScaledVector(X, -3).addScaledVector(Z, -5);
+		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, -5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = spine2Position.clone()
-		.addScaledVector(X, 3).addScaledVector(Z, -5);
+		.addScaledVector(X, 5).addScaledVector(Y, 3).addScaledVector(Z, -5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
-		.addScaledVector(X, 10).addScaledVector(Z, -5);
+		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, -5);
 
-	/// rightUpLeg
-	const rightUpLegPosition = skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3);
+	/// rightArm
+	const rightArmPosition = skeleton.getWorldTransform(rightArm).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightUpLegPosition.clone()
-		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, 5);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightUpLegPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, 5);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightUpLegPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, -5);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightUpLegPosition.clone()
-		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+	boneScaffold[rightArm] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine2Position.clone()
+		.addScaledVector(X, -14).addScaledVector(Y, 3).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightArmPosition.clone()
+		.addScaledVector(X, 1).addScaledVector(Y, 3).addScaledVector(Z, 3);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightArmPosition.clone()
+		.addScaledVector(X, 1).addScaledVector(Y, 3).addScaledVector(Z, -3);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
+		.addScaledVector(X, -14).addScaledVector(Y, 3).addScaledVector(Z, -5);
+
+	/// leftArm
+	const leftArmPosition = skeleton.getWorldTransform(leftArm).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftArm] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = spine2Position.clone()
+		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftArmPosition.clone()
+		.addScaledVector(X, 1).addScaledVector(Y, 3).addScaledVector(Z, -3);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftArmPosition.clone()
+		.addScaledVector(X, 1).addScaledVector(Y, 3).addScaledVector(Z, 3);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
+		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, 5);
+
+
 
 	/// neck
 	const neckPosition = skeleton.getWorldTransform(neck).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
+	boneScaffold[neck] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = neckPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = neckPosition.clone()
@@ -257,9 +289,39 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = neckPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
 
+	/// head
+	const headPosition = skeleton.getWorldTransform(head).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[head] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = headPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = headPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = headPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = headPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+
+
+
+	/// rightUpLeg
+	const rightUpLegPosition = skeleton.getWorldTransform(rightUpLeg).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[rightUpLeg] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+
 	/// rightLeg
 	const rightLegPosition = skeleton.getWorldTransform(rightLeg).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
+	boneScaffold[rightLeg] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightLegPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightLegPosition.clone()
@@ -272,6 +334,7 @@ window.testScaffold = function() {
 	/// rightFoot
 	const rightFootPosition = skeleton.getWorldTransform(rightFoot).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
+	boneScaffold[rightFoot] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightFootPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Z, 2);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightFootPosition.clone()
@@ -284,6 +347,7 @@ window.testScaffold = function() {
 	/// rightToeBase
 	const rightToeBasePosition = skeleton.getWorldTransform(rightToeBase).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
+	boneScaffold[rightToeBase] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightToeBasePosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Y, 1);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightToeBasePosition.clone()
@@ -296,6 +360,7 @@ window.testScaffold = function() {
 	/// rightToe_End
 	const rightToe_EndPosition = skeleton.getWorldTransform(rightToe_End).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
+	boneScaffold[rightToe_End] = fd0;
 	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightToe_EndPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Y, 1).addScaledVector(Z, -2);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightToe_EndPosition.clone()
@@ -305,17 +370,134 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightToe_EndPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Y, -1).addScaledVector(Z, -2);
 
-	/// rightShoulder
-	const rightShoulderPosition = skeleton.getWorldTransform(rightShoulder).transform(new THREE.Vector3);
+	/// rightForeArm
+	const rightForeArmPosition = skeleton.getWorldTransform(rightForeArm).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightShoulderPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, -3).addScaledVector(Z, -2);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightShoulderPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, -2);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightShoulderPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, 3).addScaledVector(Z, 2);
-	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightShoulderPosition.clone()
-		.addScaledVector(X, -5).addScaledVector(Y, -3).addScaledVector(Z, 2);
+	boneScaffold[rightForeArm] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -3).addScaledVector(Z, 2);
+
+	/// rightHand
+	const rightHandPosition = skeleton.getWorldTransform(rightHand).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[rightHand] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = rightHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = rightHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = rightHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -2).addScaledVector(Z, 2);
+
+
+
+	/// leftUpLeg
+	const leftUpLegPosition = skeleton.getWorldTransform(leftUpLeg).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftUpLeg] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, 5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftUpLegPosition.clone()
+		.addScaledVector(X, -5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftUpLegPosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
+
+	/// leftLeg
+	const leftLegPosition = skeleton.getWorldTransform(leftLeg).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftLeg] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftLegPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftLegPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, 3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftLegPosition.clone()
+		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftLegPosition.clone()
+		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+	/// leftFoot
+	const leftFootPosition = skeleton.getWorldTransform(leftFoot).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftFoot] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftFootPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftFootPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftFootPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftFootPosition.clone()
+		.addScaledVector(X, 2).addScaledVector(Z, -2);
+
+	/// leftToeBase
+	const leftToeBasePosition = skeleton.getWorldTransform(leftToeBase).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftToeBase] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftToeBasePosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, 1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftToeBasePosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Y, 1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftToeBasePosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Y, -1);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftToeBasePosition.clone()
+		.addScaledVector(X, 5).addScaledVector(Y, -1);
+
+	/// leftToe_End
+	const leftToe_EndPosition = skeleton.getWorldTransform(leftToe_End).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftToe_End] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftToe_EndPosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Y, 1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftToe_EndPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Y, 1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftToe_EndPosition.clone()
+		.addScaledVector(X, -2).addScaledVector(Y, -1).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftToe_EndPosition.clone()
+		.addScaledVector(X, 3).addScaledVector(Y, -1).addScaledVector(Z, -2);
+
+	/// leftForeArm
+	const leftForeArmPosition = skeleton.getWorldTransform(leftForeArm).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftForeArm] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftForeArmPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -3).addScaledVector(Z, 2);
+
+	/// leftHand
+	const leftHandPosition = skeleton.getWorldTransform(leftHand).transform(new THREE.Vector3);
+	fd0 = scaffold.addFace(4);
+	boneScaffold[leftHand] = fd0;
+	scaffoldPosition[scaffold.cell(scaffold.vertex, fd0)] = leftHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = leftHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 2).addScaledVector(Z, -2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = leftHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, 2).addScaledVector(Z, 2);
+	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftHandPosition.clone()
+		.addScaledVector(X, 0).addScaledVector(Y, -2).addScaledVector(Z, 2);
+
+
+
+
+
+
+
+
+	console.log(boneScaffold)
+
 
 	scaffoldRenderer.vertices.create({size: 0.5, color: new THREE.Color(0x00FF00)}).addTo(scene);
 	scaffoldRenderer.edges.create({size: 80, color: new THREE.Color(0x00FF00)}).addTo(scene);
