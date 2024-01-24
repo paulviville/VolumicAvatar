@@ -100,6 +100,10 @@ export default function Skeleton () {
 		return labelDictionary[label];
 	}
 
+	this.getLabel = function (bone) {
+		return labels[bone];
+	}
+
 	this.nbBones = function () {
 		return attributes.nbElements();
 	}
@@ -184,6 +188,10 @@ export default function Skeleton () {
 
 	this.newBoneAttribute = function (name) {
 		return attributes.createAttribute(name);
+	}
+
+	this.getBoneAttribute = function (name) {
+		return attributes.getAttribute(name);
 	}
 }
 

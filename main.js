@@ -97,9 +97,38 @@ const guiParams = {
 			renderer.vertices.update()
 		});
 	},
+
+	updateScaffold: function() {
+		const weights = scaffold.getAttribute(scaffold.vertex, "weights");
+		const position = scaffold.getAttribute(scaffold.vertex, "position");
+		const bind = scaffold.getAttribute(scaffold.vertex, "bind");
+
+		scaffold.foreach(scaffold.vertex, vd => {
+			const vid = scaffold.cell(scaffold.vertex, vd);
+			let pb = bind[vid].clone();
+			let dqBlend = new DualQuaternion(new THREE.Quaternion(0,0,0,0), new THREE.Quaternion(0,0,0,0));
+			if(weights[vid] == undefined)
+				return
+			
+			for(let w = 0; w < weights[vid]?.length ?? 0; ++w) {
+				let b = weights[vid][w];
+				let off = skeleton.getOffset(b.b);
+				dqBlend.addScaledDualQuaternion(off, b.w);
+			}
+			dqBlend.normalize();
+			let pdq = DualQuaternion.setFromTranslation(pb);
+			pdq.multiplyDualQuaternions(dqBlend, pdq);
+			position[vid].copy(pdq.transform(new THREE.Vector3));
+		});
+
+		scaffoldRenderer.vertices.update()
+		scaffoldRenderer.edges.update()
+	},
+
 	update: function() {
 		this.updateSkeleton();
 		this.updateSkin();
+		this.updateScaffold();
 	},
 	loop: false,
 	speed: 1.0,
@@ -115,17 +144,26 @@ const guiParams = {
 }
 
 window.skin = guiParams.updateSkin;
+window.scaffold = guiParams.updateScaffold;
 
 const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
 const scaffold = new CMap2();
+
 scaffold.createEmbedding(scaffold.vertex);
 const scaffoldPosition = scaffold.addAttribute(scaffold.vertex, "position");
+const scaffoldHDart = scaffold.addAttribute(scaffold.dart, "hDart");
+const scaffoldBind = scaffold.addAttribute(scaffold.vertex, "bind");
+const scaffoldWeight = scaffold.addAttribute(scaffold.vertex, "weights");
 const scaffoldRenderer = new Renderer(scaffold);
 
-window.testScaffold = function() {
+const hexMesh = new CMap3();
+// const hexRenderer = new Renderer(hexMesh);
+
+
+function testScaffold() {
 
 	const boneScaffold = skeleton.newBoneAttribute("scaffold");
 
@@ -144,6 +182,7 @@ window.testScaffold = function() {
 	const rightArm = skeleton.getBone("RightArm");
 	const rightForeArm = skeleton.getBone("RightForeArm");
 	const rightHand = skeleton.getBone("RightHand");
+	const rightShoulder = skeleton.getBone("RightShoulder");
 
 	const leftUpLeg = skeleton.getBone("LeftUpLeg");
 	const leftLeg = skeleton.getBone("LeftLeg");
@@ -153,6 +192,7 @@ window.testScaffold = function() {
 	const leftArm = skeleton.getBone("LeftArm");
 	const leftForeArm = skeleton.getBone("LeftForeArm");
 	const leftHand = skeleton.getBone("LeftHand");
+	const leftShoulder = skeleton.getBone("LeftShoulder");
 
 	// const sphereGeometry = new THREE.SphereBufferGeometry(3, 10, 10);
 	// const sphereMaterial = new THREE.MeshLambertMaterial({color: 0x0000FF});
@@ -184,6 +224,16 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = hipsPosition.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, -5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = [{b: hips, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: hips, w: 1}]
+
+
 	/// spine
 	const spinePosition = skeleton.getWorldTransform(spine).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(8);
@@ -204,6 +254,15 @@ window.testScaffold = function() {
 		.addScaledVector(X, 3).addScaledVector(Z, -5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spinePosition.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, -5);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: hips, w: 0.45}, {b: spine, w: 0.35}, {b: spine1, w: 0.20}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: hips, w: 0.57}, {b: spine, w: 0.30}, {b: spine1, w: 0.13}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: hips, w: 0.57}, {b: spine, w: 0.30}, {b: spine1, w: 0.13}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = [{b: hips, w: 0.45}, {b: spine, w: 0.35}, {b: spine1, w: 0.20}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = [{b: hips, w: 0.37}, {b: spine, w: 0.40}, {b: spine1, w: 0.23}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = [{b: hips, w: 0.45}, {b: spine, w: 0.36}, {b: spine1, w: 0.19}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = [{b: hips, w: 0.45}, {b: spine, w: 0.36}, {b: spine1, w: 0.19}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: hips, w: 0.37}, {b: spine, w: 0.40}, {b: spine1, w: 0.23}]
 
 	/// spine1
 	const spine1Position = skeleton.getWorldTransform(spine1).transform(new THREE.Vector3);
@@ -226,6 +285,16 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine1Position.clone()
 		.addScaledVector(X, 10).addScaledVector(Z, -5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: hips, w: 0.01}, {b: spine, w: 0.33}, {b: spine1, w: 0.54}, {b: spine2, w: 0.12}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: hips, w: 0.03}, {b: spine, w: 0.37}, {b: spine1, w: 0.48}, {b: spine2, w: 0.12}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: hips, w: 0.03}, {b: spine, w: 0.37}, {b: spine1, w: 0.48}, {b: spine2, w: 0.12}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = [{b: hips, w: 0.01}, {b: spine, w: 0.33}, {b: spine1, w: 0.54}, {b: spine2, w: 0.12}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = [{b: hips, w: 0.0}, {b: spine, w: 0.22}, {b: spine1, w: 0.65}, {b: spine2, w: 0.13}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = [{b: hips, w: 0.0}, {b: spine, w: 0.22}, {b: spine1, w: 0.64}, {b: spine2, w: 0.14}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = [{b: hips, w: 0.0}, {b: spine, w: 0.22}, {b: spine1, w: 0.64}, {b: spine2, w: 0.14}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: hips, w: 0.0}, {b: spine, w: 0.22}, {b: spine1, w: 0.65}, {b: spine2, w: 0.13}]
+
+
 	/// spine2
 	const spine2Position = skeleton.getWorldTransform(spine2).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(8);
@@ -247,6 +316,19 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
 		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, -5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftShoulder, w: 0.11}, {b: spine2, w: 0.83}, {b: spine1, w: 0.06}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: spine2, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: spine2, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1], fd0))] = [{b: rightShoulder, w: 0.11}, {b: spine2, w: 0.83}, {b: spine1, w: 0.06}]
+	
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1], fd0))] = [{b: spine2, w: 0.64}, {b: rightShoulder, w: 0.36}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1], fd0))] = [{b: spine2, w: 0.37}, {b: spine1, w: 0.4}, {b: leftShoulder, w: 0.49}, {b: leftArm, w: 0.10}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1,1,1,1,1], fd0))] = [{b: spine2, w: 0.37}, {b: spine1, w: 0.4}, {b: rightShoulder, w: 0.49}, {b: rightArm, w: 0.10}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: spine2, w: 0.64}, {b: leftShoulder, w: 0.36}]
+
+
+
+
 	/// rightArm
 	const rightArmPosition = skeleton.getWorldTransform(rightArm).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -259,6 +341,12 @@ window.testScaffold = function() {
 		.addScaledVector(X, 1).addScaledVector(Y, 3).addScaledVector(Z, -3);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = spine2Position.clone()
 		.addScaledVector(X, -14).addScaledVector(Y, 3).addScaledVector(Z, -5);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightShoulder, w: 0.11}, {b: spine2, w: 0.83}, {b: spine1, w: 0.06}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: spine2, w: 0.64}, {b: rightShoulder, w: 0.36}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightArm, w: 0.59},{b: rightShoulder, w: 0.38},{b: spine2, w: 0.03}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: spine2, w: 0.64}, {b: rightShoulder, w: 0.36}]
+	
 
 	/// leftArm
 	const leftArmPosition = skeleton.getWorldTransform(leftArm).transform(new THREE.Vector3);
@@ -273,7 +361,11 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = spine2Position.clone()
 		.addScaledVector(X, 14).addScaledVector(Y, 3).addScaledVector(Z, -5);
 
-
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftShoulder, w: 0.11}, {b: spine2, w: 0.83}, {b: spine1, w: 0.06}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: spine2, w: 0.64}, {b: leftShoulder, w: 0.36}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: leftArm, w: 0.59},{b: leftShoulder, w: 0.38},{b: spine2, w: 0.03}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: leftArm, w: 0.46},{b: leftShoulder, w: 0.45},{b: spine2, w: 0.8}]
+		
 
 	/// neck
 	const neckPosition = skeleton.getWorldTransform(neck).transform(new THREE.Vector3);
@@ -288,6 +380,13 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = neckPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: head, w: 0.02},{b: neck, w: 0.07}, {b: spine2, w: 0.91}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: head, w: 0.02},{b: neck, w: 0.07}, {b: spine2, w: 0.91}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightShoulder, w: 0.10}, {b: spine2, w: 0.90}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: leftShoulder, w: 0.10}, {b: spine2, w: 0.90}]
+	
+
+
 	/// head
 	const headPosition = skeleton.getWorldTransform(head).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -301,7 +400,11 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = headPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
 
-
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: head, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: head, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: head, w: 1}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: head, w: 1}]
+	
 
 
 	/// rightUpLeg
@@ -317,6 +420,12 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightUpLegPosition.clone()
 		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: hips, w: 0.07}, {b: rightUpLeg, w: 0.93}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: hips, w: 0.06}, {b: rightUpLeg, w: 0.94}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: hips, w: 0.06}, {b: rightUpLeg, w: 0.94}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: hips, w: 0.07}, {b: rightUpLeg, w: 0.86}, {b: leftUpLeg, w: 0.07}]
+	
+
 	/// rightLeg
 	const rightLegPosition = skeleton.getWorldTransform(rightLeg).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -329,6 +438,13 @@ window.testScaffold = function() {
 		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightLegPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightUpLeg, w: 0.75}, {b: rightLeg, w: 0.25}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: rightUpLeg, w: 0.62}, {b: rightLeg, w: 0.38}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightUpLeg, w: 0.62}, {b: rightLeg, w: 0.38}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: rightUpLeg, w: 0.65}, {b: rightLeg, w: 0.35}]
+	
 
 	/// rightFoot
 	const rightFootPosition = skeleton.getWorldTransform(rightFoot).transform(new THREE.Vector3);
@@ -343,6 +459,12 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightFootPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Z, -2);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightFoot, w: 0.39}, {b: rightLeg, w: 0.61}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: rightFoot, w: 0.37}, {b: rightLeg, w: 0.63}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightFoot, w: 0.37}, {b: rightLeg, w: 0.63}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: rightFoot, w: 0.39}, {b: rightLeg, w: 0.59}]
+	
+
 	/// rightToeBase
 	const rightToeBasePosition = skeleton.getWorldTransform(rightToeBase).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -355,6 +477,12 @@ window.testScaffold = function() {
 		.addScaledVector(X, -5).addScaledVector(Y, -1);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightToeBasePosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Y, -1);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightFoot, w: 0.38}, {b: rightToeBase, w: 0.62}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: rightFoot, w: 0.36}, {b: rightToeBase, w: 0.64}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightFoot, w: 0.31}, {b: rightToeBase, w: 0.69}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: rightFoot, w: 0.29}, {b: rightToeBase, w: 0.71}]
+	
 
 	/// rightToe_End
 	const rightToe_EndPosition = skeleton.getWorldTransform(rightToe_End).transform(new THREE.Vector3);
@@ -369,6 +497,12 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightToe_EndPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Y, -1).addScaledVector(Z, -2);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightToeBase, w: 0.82}, {b: rightFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: rightToeBase, w: 0.82}, {b: rightFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: rightToeBase, w: 0.82}, {b: rightFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: rightToeBase, w: 0.82}, {b: rightFoot, w: 0.18}]
+	
+
 	/// rightForeArm
 	const rightForeArmPosition = skeleton.getWorldTransform(rightForeArm).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -381,6 +515,12 @@ window.testScaffold = function() {
 		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, -2);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightForeArmPosition.clone()
 		.addScaledVector(X, 0).addScaledVector(Y, -3).addScaledVector(Z, -2);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightArm, w: 0.69}, {b: rightForeArm, w: 0.31}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] =[{b: rightArm, w: 0.76}, {b: rightForeArm, w: 0.24}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] =[{b: rightArm, w: 0.79}, {b: rightForeArm, w: 0.21}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: rightArm, w: 0.80}, {b: rightForeArm, w: 0.20}]
+	
 
 	/// rightHand
 	const rightHandPosition = skeleton.getWorldTransform(rightHand).transform(new THREE.Vector3);
@@ -395,7 +535,10 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = rightHandPosition.clone()
 		.addScaledVector(X, 0).addScaledVector(Y, -2).addScaledVector(Z, -2);
 
-
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: rightHand, w: 0.65}, {b: rightForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] =[{b: rightHand, w: 0.65}, {b: rightForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] =[{b: rightHand, w: 0.65}, {b: rightForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: rightHand, w: 0.65}, {b: rightForeArm, w: 0.35}]
 
 	/// leftUpLeg
 	const leftUpLegPosition = skeleton.getWorldTransform(leftUpLeg).transform(new THREE.Vector3);
@@ -410,6 +553,13 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftUpLegPosition.clone()
 		.addScaledVector(X, 5).addScaledVector(Y, -13).addScaledVector(Z, -5);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: hips, w: 0.06}, {b: leftUpLeg, w: 0.94}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: hips, w: 0.07}, {b: leftUpLeg, w: 0.93}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: hips, w: 0.07}, {b: leftUpLeg, w: 0.86}, {b: rightUpLeg, w: 0.07}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: hips, w: 0.06}, {b: leftUpLeg, w: 0.94}]
+
+	
+
 	/// leftLeg
 	const leftLegPosition = skeleton.getWorldTransform(leftLeg).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -422,6 +572,12 @@ window.testScaffold = function() {
 		.addScaledVector(X, -3.5).addScaledVector(Z, -3.5);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftLegPosition.clone()
 		.addScaledVector(X, 3.5).addScaledVector(Z, -3.5);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftUpLeg, w: 0.62}, {b: leftLeg, w: 0.38}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: leftUpLeg, w: 0.75}, {b: leftLeg, w: 0.25}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: leftUpLeg, w: 0.65}, {b: leftLeg, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: leftUpLeg, w: 0.62}, {b: leftLeg, w: 0.38}]
+	
 
 	/// leftFoot
 	const leftFootPosition = skeleton.getWorldTransform(leftFoot).transform(new THREE.Vector3);
@@ -436,6 +592,11 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftFootPosition.clone()
 		.addScaledVector(X, 2).addScaledVector(Z, -2);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftFoot, w: 0.37}, {b: leftLeg, w: 0.63}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: leftFoot, w: 0.39}, {b: leftLeg, w: 0.61}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: leftFoot, w: 0.39}, {b: leftLeg, w: 0.59}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: leftFoot, w: 0.37}, {b: leftLeg, w: 0.63}]
+	
 	/// leftToeBase
 	const leftToeBasePosition = skeleton.getWorldTransform(leftToeBase).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -449,6 +610,13 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftToeBasePosition.clone()
 		.addScaledVector(X, 5).addScaledVector(Y, -1);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftFoot, w: 0.36}, {b: leftToeBase, w: 0.64}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: leftFoot, w: 0.38}, {b: leftToeBase, w: 0.62}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: leftFoot, w: 0.29}, {b: leftToeBase, w: 0.71}] 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: leftFoot, w: 0.31}, {b: leftToeBase, w: 0.69}]
+	
+
+		
 	/// leftToe_End
 	const leftToe_EndPosition = skeleton.getWorldTransform(leftToe_End).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -461,6 +629,12 @@ window.testScaffold = function() {
 		.addScaledVector(X, -2).addScaledVector(Y, -1).addScaledVector(Z, -2);
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftToe_EndPosition.clone()
 		.addScaledVector(X, 3).addScaledVector(Y, -1).addScaledVector(Z, -2);
+
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftToeBase, w: 0.82}, {b: leftFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] = [{b: leftToeBase, w: 0.82}, {b: leftFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] = [{b: leftToeBase, w: 0.82}, {b: leftFoot, w: 0.18}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = [{b: leftToeBase, w: 0.82}, {b: leftFoot, w: 0.18}]
+	
 
 	/// leftForeArm
 	const leftForeArmPosition = skeleton.getWorldTransform(leftForeArm).transform(new THREE.Vector3);
@@ -475,6 +649,12 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftForeArmPosition.clone()
 		.addScaledVector(X, 0).addScaledVector(Y, 3).addScaledVector(Z, 2);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftArm, w: 0.69}, {b: leftForeArm, w: 0.31}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] =[{b: leftArm, w: 0.76}, {b: leftForeArm, w: 0.24}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] =[{b: leftArm, w: 0.79}, {b: leftForeArm, w: 0.21}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: leftArm, w: 0.80}, {b: leftForeArm, w: 0.20}]
+	
+
 	/// leftHand
 	const leftHandPosition = skeleton.getWorldTransform(leftHand).transform(new THREE.Vector3);
 	fd0 = scaffold.addFace(4);
@@ -488,9 +668,17 @@ window.testScaffold = function() {
 	scaffoldPosition[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] = leftHandPosition.clone()
 		.addScaledVector(X, 0).addScaledVector(Y, 2).addScaledVector(Z, 2);
 
+	scaffoldWeight[scaffold.cell(scaffold.vertex, fd0)] = [{b: leftHand, w: 0.65}, {b: leftForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi1[fd0])] =[{b: leftHand, w: 0.65}, {b: leftForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi([1,1], fd0))] =[{b: leftHand, w: 0.65}, {b: leftForeArm, w: 0.35}]
+	scaffoldWeight[scaffold.cell(scaffold.vertex, scaffold.phi_1[fd0])] =[{b: leftHand, w: 0.65}, {b: leftForeArm, w: 0.35}]
+	
 
 
-
+	scaffold.foreach(scaffold.vertex, vd => {
+		const vid = scaffold.cell(scaffold.vertex, vd);
+		scaffoldBind[vid] = scaffoldPosition[vid].clone();
+	})
 
 
 	console.log(boneScaffold)
@@ -499,6 +687,233 @@ window.testScaffold = function() {
 	scaffoldRenderer.vertices.create({size: 0.5, color: new THREE.Color(0x00FF00)}).addTo(scene);
 	scaffoldRenderer.edges.create({size: 80, color: new THREE.Color(0x008800)}).addTo(scene);
 	// scaffoldRenderer.faces.create().addTo(scene);
+
+
+}
+
+function sewVolumes(cmap3, wd0, wd1) {
+	const nbEdges = cmap3.codegree(cmap3.face, wd0);
+	if(nbEdges != cmap3.codegree(cmap3.face, wd1))
+		return;
+
+	if(wd0 != cmap3.phi3[wd0] || wd1 != cmap3.phi3[wd1])
+		return;
+
+	let fd0 = wd0;
+	let fd1 = wd1;
+	for(let i = 0; i < nbEdges; ++i) {
+		cmap3.sewPhi3(fd0, fd1);
+		fd0 = cmap3.phi1[fd0];
+		fd1 = cmap3.phi_1[fd1];
+	}
+	
+	return wd0;
+}
+
+function create3Chunk(cmap3) {
+	const wd0 = cmap3.addPrism(4, false);
+	const wd1 = cmap3.addPrism(4, false);
+	const wd2 = cmap3.addPrism(4, false);
+
+	sewVolumes(cmap3, cmap3.phi([1, 2], wd0), cmap3.phi([-1, 2], wd1));
+	sewVolumes(cmap3, cmap3.phi([1, 2], wd1), cmap3.phi([-1, 2], wd2));
+
+	return wd0;
+};
+
+function insertTorsoChunk(cmap3, boneLabel0, boneLabel1) {
+	const boneScaffold = skeleton.getBoneAttribute("scaffold");
+
+	const bone0 = skeleton.getBone(boneLabel0);
+	const bone1 = skeleton.getBone(boneLabel1);
+
+	const wd0 = create3Chunk(cmap3);
+	const wd1 = cmap3.phi([1, 2, 3, 2, 1], wd0);
+	const wd2 = cmap3.phi([1, 2, 3, 2, 1], wd1);
+
+	const wd0_ = cmap3.phi([-1, -1], wd0)
+	const wd1_ = cmap3.phi([-1, -1], wd1)
+	const wd2_ = cmap3.phi([-1, -1], wd2)
+
+	///		4 <-- 5 <-- 6 <-- 7
+	///		|	  		 	  |
+	///		3 --> 2 --> 1 --> 0
+	///				    phi2[sd1]
+
+	///		4 --> 5 --> 6 --> 7		4 <-- 5 <-- 6 <-- 7
+	///		|	  		 	  |		|	  		 	  |
+	///		3 <-- 2 <-- 1 <-- 0		3 --> 2 --> 1 --> 0
+	///					  sd0					phi2[sd1]
+
+	let sd0 = boneScaffold[bone0];
+	let sd1 = boneScaffold[bone1]; // edge 0-1
+	console.log(sd0, sd1)
+	scaffoldHDart[sd0] = cmap3.phi2[wd0];
+	sd0 = scaffold.phi1[sd0]; // edge 1-2
+	scaffoldHDart[sd0] = cmap3.phi2[wd1];
+	sd0 = scaffold.phi1[sd0]; // edge 2-3
+	scaffoldHDart[sd0] = cmap3.phi2[wd2];
+	sd0 = scaffold.phi1[sd0]; // edge 3-4
+	scaffoldHDart[sd0] = cmap3.phi([2,-1], wd2);
+	sd0 = scaffold.phi1[sd0]; // edge 4-5
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd2);
+	sd0 = scaffold.phi1[sd0]; // edge 5-6
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd1);
+	sd0 = scaffold.phi1[sd0]; // edge 6-7
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 7-0
+	scaffoldHDart[sd0] = cmap3.phi([2,1], wd0);
+	sd0 = scaffold.phi1[sd0];
+
+	sd1 = scaffold.phi2[sd1]; // edge 1-0
+	scaffoldHDart[sd1] = cmap3.phi2[wd0_];
+	sd1 = scaffold.phi1[sd1]; // edge 0-7
+	scaffoldHDart[sd1] = cmap3.phi([2,-1], wd0_);
+	sd1 = scaffold.phi1[sd1]; // edge 7-6
+	scaffoldHDart[sd1] = cmap3.phi([2,1,1], wd0_);
+	sd1 = scaffold.phi1[sd1]; // edge 6-5
+	scaffoldHDart[sd1] = cmap3.phi([2,1,1], wd1_);
+	sd1 = scaffold.phi1[sd1]; // edge 5-4
+	scaffoldHDart[sd1] = cmap3.phi([2,1,1], wd2_);
+	sd1 = scaffold.phi1[sd1]; // edge 4-3
+	scaffoldHDart[sd1] = cmap3.phi([2,1], wd2_);
+	sd1 = scaffold.phi1[sd1]; // edge 3-2
+	scaffoldHDart[sd1] = cmap3.phi2[wd2_];
+	sd1 = scaffold.phi1[sd1]; // edge 2-1
+	scaffoldHDart[sd1] = cmap3.phi2[wd1_];
+	sd1 = scaffold.phi1[sd1]; 
+
+}
+
+function testVolumes() {
+	const boneScaffold = skeleton.getBoneAttribute("scaffold");
+
+	console.log(boneScaffold)
+	const hips = skeleton.getBone("Hips");
+	const spine = skeleton.getBone("Spine");
+	const spine1 = skeleton.getBone("Spine1");
+	const spine2 = skeleton.getBone("Spine2");
+	const neck = skeleton.getBone("Neck");
+	const head = skeleton.getBone("Head");
+
+	const rightUpLeg = skeleton.getBone("RightUpLeg");
+	const rightLeg = skeleton.getBone("RightLeg");
+	const rightFoot = skeleton.getBone("RightFoot");
+	const rightToeBase = skeleton.getBone("RightToeBase");
+	const rightToe_End = skeleton.getBone("RightToe_End");
+	const rightArm = skeleton.getBone("RightArm");
+	const rightForeArm = skeleton.getBone("RightForeArm");
+	const rightHand = skeleton.getBone("RightHand");
+	const rightShoulder = skeleton.getBone("RightShoulder");
+
+	const leftUpLeg = skeleton.getBone("LeftUpLeg");
+	const leftLeg = skeleton.getBone("LeftLeg");
+	const leftFoot = skeleton.getBone("LeftFoot");
+	const leftToeBase = skeleton.getBone("LeftToeBase");
+	const leftToe_End = skeleton.getBone("LeftToe_End");
+	const leftArm = skeleton.getBone("LeftArm");
+	const leftForeArm = skeleton.getBone("LeftForeArm");
+	const leftHand = skeleton.getBone("LeftHand");
+	const leftShoulder = skeleton.getBone("LeftShoulder");
+
+
+	const wdHips = insertTorsoChunk(hexMesh, "Hips", "Spine")
+	const wdSpine = insertTorsoChunk(hexMesh, "Spine", "Spine1")
+	const wdSpine1 = insertTorsoChunk(hexMesh, "Spine1", "Spine2")
+
+	let sd0 = boneScaffold[hips]; // edge 0-1
+	let sd1 = scaffold.phi2[boneScaffold[spine]];
+
+	let sd2 = boneScaffold[spine]; // edge 0-1
+	let sd3 = scaffold.phi2[boneScaffold[spine1]];
+
+	let sd4 = boneScaffold[spine1]; // edge 0-1
+	let sd5 = scaffold.phi2[boneScaffold[spine2]];
+
+	/// sew volume faces
+	/// mark sown
+	/// skip marked
+
+	let sewingMarker = hexMesh.newMarker();
+	scaffold.foreachDartPhi1(sd1, sd => {
+		const wd0 = scaffoldHDart[sd];
+		const wd1 = scaffoldHDart[scaffold.phi2[sd]];
+		console.log(sd, wd0, scaffold.phi2[sd], wd1)
+
+		if(sewingMarker.markedCell(hexMesh.face2, wd0))
+			return;
+		console.log("unmarked face")
+
+		sewVolumes(hexMesh, wd0, wd1);
+
+		sewingMarker.markCell(hexMesh.face, wd0)
+
+	})
+
+	scaffold.foreachDartPhi1(sd3, sd => {
+		const wd0 = scaffoldHDart[sd];
+		const wd1 = scaffoldHDart[scaffold.phi2[sd]];
+		console.log(sd, wd0, scaffold.phi2[sd], wd1)
+
+		if(sewingMarker.markedCell(hexMesh.face2, wd0))
+			return;
+		console.log("unmarked face")
+
+		sewVolumes(hexMesh, wd0, wd1);
+
+		sewingMarker.markCell(hexMesh.face, wd0)
+
+	})
+
+	hexMesh.close();
+	hexMesh.setEmbeddings(hexMesh.vertex);
+	const hexPosition = hexMesh.addAttribute(hexMesh.vertex, "position");
+	console.log(hexMesh.nbCells(hexMesh.volume), hexMesh.nbDarts())
+	hexMesh.foreach(hexMesh.vertex, vd => {
+		console.log(vd, hexMesh.cell(hexMesh.vertex, vd))
+		hexPosition[hexMesh.cell(hexMesh.vertex, vd)] = new THREE.Vector3;
+	
+	})
+
+	console.log(scaffoldHDart)
+	scaffold.foreachDartPhi1(sd0, sd => {
+		console.log(sd, scaffoldHDart[sd])
+		const vd = scaffoldHDart[sd];
+		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	})
+
+	scaffold.foreachDartPhi1(sd1, sd => {
+		console.log(sd, scaffoldHDart[sd])
+		const vd = scaffoldHDart[sd];
+		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	})
+
+	scaffold.foreachDartPhi1(sd3, sd => {
+		console.log(sd, scaffoldHDart[sd])
+		const vd = scaffoldHDart[sd];
+		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	})
+
+	scaffold.foreachDartPhi1(sd5, sd => {
+		console.log(sd, scaffoldHDart[sd])
+		const vd = scaffoldHDart[sd];
+		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	})
+
+	const hexRenderer = new Renderer(hexMesh);
+	hexRenderer.vertices.create({size:0.5}).addTo(scene);
+	hexRenderer.edges.create({size: 100}).addTo(scene);
+
+
+	// let hmd0 = wd0Spine;
+	// let hmd1 = hexMesh.phi([],wd0Spine);
+	// do {
+
+	// } while(d0 != wd0Spine);
+
+
+
+	// const 
 
 
 }
@@ -531,7 +946,7 @@ loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 		cmapRenderers[0] = new Renderer(cmaps[0]);
 		// cmapRenderers[1] = new Renderer(cmaps[1]);
 
-		cmapRenderers[0].vertices.create({size: 0.125}).addTo(scene)
+		cmapRenderers[0].vertices.create({size: 0.25}).addTo(scene)
 		// cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
 		// const weights = cmaps[0].getAttribute(cmaps[0].vertex, "weights");
@@ -560,8 +975,8 @@ loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 		gui.add(guiParams, "currentTime", guiParams.timeRange.first, guiParams.timeRange.last).onChange(guiParams.update.bind(guiParams)).listen();
 		console.log(guiParams)
 		
-		window.testScaffold()
-
+		testScaffold()
+		testVolumes()
 		// console.log(cmap.getAttribute(cmap.vertex, "position"))
 	}
 })
@@ -583,6 +998,7 @@ function setMouse(event) {
 function onMouseDown(event) {
 	const skin = cmapRenderers[0].vertices.mesh;
 	if(event.button == 0){
+		const weights = cmaps[0].getAttribute(cmaps[0].vertex, "weights");
 		setMouse(event)
 		raycaster.setFromCamera(mouse, camera);
 		console.log(mouse.x, mouse.y)
@@ -590,11 +1006,16 @@ function onMouseDown(event) {
 		const hit = raycaster.intersectObject(skin)[0];
 		if(hit) {
 			console.log(hit, hit.instanceId, skin.vd[hit.instanceId])
-
+			const vd = skin.vd[hit.instanceId];
+			const w = weights[cmaps[0].cell(cmaps[0].vertex, vd)];
+			console.log(vd, w)
+			w.forEach(b => {
+				console.log(b.b, skeleton.getLabel(b.b), b.w)
+			})
 		}
 	}
 }
-window.addEventListener( 'pointerdown', onMouseDown )
+window.addEventListener('pointerdown', onMouseDown )
 
 
 const grid = new THREE.GridHelper(1000, 25)
