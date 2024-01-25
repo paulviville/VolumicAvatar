@@ -55,6 +55,8 @@ let cmapRenderers = [];
 let skeletonRenderer;
 let fbxImporter;
 let skeleton;
+const hexMesh = new CMap3();
+let hexRenderer;
 
 const gui = new GUI({autoPlace: true, hideable: false});
 
@@ -125,10 +127,38 @@ const guiParams = {
 		scaffoldRenderer.edges.update()
 	},
 
+	updateHexes: function() {
+		const weights = hexMesh.getAttribute(hexMesh.vertex, "weights");
+		const position = hexMesh.getAttribute(hexMesh.vertex, "position");
+		const bind = hexMesh.getAttribute(hexMesh.vertex, "bind");
+
+		hexMesh.foreach(hexMesh.vertex, vd => {
+			const vid = hexMesh.cell(hexMesh.vertex, vd);
+			let pb = bind[vid].clone();
+			let dqBlend = new DualQuaternion(new THREE.Quaternion(0,0,0,0), new THREE.Quaternion(0,0,0,0));
+			if(weights[vid] == undefined)
+				return
+			
+			for(let w = 0; w < weights[vid]?.length ?? 0; ++w) {
+				let b = weights[vid][w];
+				let off = skeleton.getOffset(b.b);
+				dqBlend.addScaledDualQuaternion(off, b.w);
+			}
+			dqBlend.normalize();
+			let pdq = DualQuaternion.setFromTranslation(pb);
+			pdq.multiplyDualQuaternions(dqBlend, pdq);
+			position[vid].copy(pdq.transform(new THREE.Vector3));
+		});
+
+		hexRenderer.vertices.update()
+		hexRenderer.edges.update()
+	},
+
 	update: function() {
 		this.updateSkeleton();
-		this.updateSkin();
+		// this.updateSkin();
 		this.updateScaffold();
+		this.updateHexes();
 	},
 	loop: false,
 	speed: 1.0,
@@ -159,8 +189,6 @@ const scaffoldBind = scaffold.addAttribute(scaffold.vertex, "bind");
 const scaffoldWeight = scaffold.addAttribute(scaffold.vertex, "weights");
 const scaffoldRenderer = new Renderer(scaffold);
 
-const hexMesh = new CMap3();
-// const hexRenderer = new Renderer(hexMesh);
 
 
 function testScaffold() {
@@ -721,6 +749,12 @@ function create3Chunk(cmap3) {
 	return wd0;
 };
 
+function create1Chunk(cmap3) {
+	const wd0 = cmap3.addPrism(4, false);
+
+	return wd0;
+};
+
 function insertTorsoChunk(cmap3, boneLabel0, boneLabel1) {
 	const boneScaffold = skeleton.getBoneAttribute("scaffold");
 
@@ -747,7 +781,6 @@ function insertTorsoChunk(cmap3, boneLabel0, boneLabel1) {
 
 	let sd0 = boneScaffold[bone0];
 	let sd1 = boneScaffold[bone1]; // edge 0-1
-	console.log(sd0, sd1)
 	scaffoldHDart[sd0] = cmap3.phi2[wd0];
 	sd0 = scaffold.phi1[sd0]; // edge 1-2
 	scaffoldHDart[sd0] = cmap3.phi2[wd1];
@@ -783,6 +816,200 @@ function insertTorsoChunk(cmap3, boneLabel0, boneLabel1) {
 	scaffoldHDart[sd1] = cmap3.phi2[wd1_];
 	sd1 = scaffold.phi1[sd1]; 
 
+	return wd0;
+
+}
+
+function insertHipsChunk(cmap3, leftLegLabel, rightLegLabel, hipsLabel) {
+	const boneScaffold = skeleton.getBoneAttribute("scaffold");
+
+	const leftLeg = skeleton.getBone(leftLegLabel);
+	const rightLeg = skeleton.getBone(rightLegLabel);
+	const hips = skeleton.getBone(hipsLabel);
+
+	const wd0 = create3Chunk(cmap3);
+	const wd1 = cmap3.phi([1, 2, 3, 2, 1], wd0);
+	const wd2 = cmap3.phi([1, 2, 3, 2, 1], wd1);
+
+	const wd0_ = cmap3.phi([-1, -1], wd0)
+	const wd1_ = cmap3.phi([-1, -1], wd1)
+	const wd2_ = cmap3.phi([-1, -1], wd2)
+
+	///		4 <-- 5 <-- 6 <-- 7
+	///		|	  		 	  |
+	///		3 --> 2 --> 1 --> 0
+	///				    phi2[sd2]
+
+	///		2 --> 3     2 --> 3	
+	///		|	  |		| 	  |	
+	///		1 <-- 0     1 <-- 0	
+	///		  sd1		  sd0	
+
+
+	let sd0 = boneScaffold[leftLeg];
+	let sd1 = boneScaffold[rightLeg]; 
+	let sd2 = boneScaffold[hips]; 
+
+	scaffoldHDart[sd0] = cmap3.phi2[wd0];
+	sd0 = scaffold.phi1[sd0]; // edge 1-2
+	scaffoldHDart[sd0] = cmap3.phi([2,-1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 2-3
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 3-0
+	scaffoldHDart[sd0] = cmap3.phi([2,1], wd0);
+	sd0 = scaffold.phi1[sd0];
+
+	scaffoldHDart[sd1] = cmap3.phi2[wd2];
+	sd1 = scaffold.phi1[sd1]; // edge 1-2
+	scaffoldHDart[sd1] = cmap3.phi([2,-1], wd2);
+	sd1 = scaffold.phi1[sd1]; // edge 2-3
+	scaffoldHDart[sd1] = cmap3.phi([2,1,1], wd2);
+	sd1 = scaffold.phi1[sd1]; // edge 3-0
+	scaffoldHDart[sd1] = cmap3.phi([2,1], wd2);
+	sd1 = scaffold.phi1[sd1];
+
+	sd2 = scaffold.phi2[sd2]; // edge 1-0
+	scaffoldHDart[sd2] = cmap3.phi2[wd0_];
+	sd2 = scaffold.phi1[sd2]; // edge 0-7
+	scaffoldHDart[sd2] = cmap3.phi([2,-1], wd0_);
+	sd2 = scaffold.phi1[sd2]; // edge 7-6
+	scaffoldHDart[sd2] = cmap3.phi([2,1,1], wd0_);
+	sd2 = scaffold.phi1[sd2]; // edge 6-5
+	scaffoldHDart[sd2] = cmap3.phi([2,1,1], wd1_);
+	sd2 = scaffold.phi1[sd2]; // edge 5-4
+	scaffoldHDart[sd2] = cmap3.phi([2,1,1], wd2_);
+	sd2 = scaffold.phi1[sd2]; // edge 4-3
+	scaffoldHDart[sd2] = cmap3.phi([2,1], wd2_);
+	sd2 = scaffold.phi1[sd2]; // edge 3-2
+	scaffoldHDart[sd2] = cmap3.phi2[wd2_];
+	sd2 = scaffold.phi1[sd2]; // edge 2-1
+	scaffoldHDart[sd2] = cmap3.phi2[wd1_];
+	sd2 = scaffold.phi1[sd2]; 
+
+
+
+
+	return wd0;
+
+}
+
+function insertShouldersChunk(cmap3, spineLabel, leftArmLabel, rightArmLabel, neckLabel) {
+	const boneScaffold = skeleton.getBoneAttribute("scaffold");
+
+	const spine = skeleton.getBone(spineLabel);
+	const leftArm = skeleton.getBone(leftArmLabel);
+	const rightArm = skeleton.getBone(rightArmLabel);
+	const neck = skeleton.getBone(neckLabel);
+
+	const wd0 = create3Chunk(cmap3);
+	const wd1 = cmap3.phi([1, 2, 3, 2, 1], wd0);
+	const wd2 = cmap3.phi([1, 2, 3, 2, 1], wd1);
+
+	const wd0_ = cmap3.phi([-1, -1], wd0)
+	const wd1_ = cmap3.phi([-1, -1], wd1)
+	const wd2_ = cmap3.phi([-1, -1], wd2)
+
+	///				      2 <-- 3 
+	///					  |	    |	
+	///					  1 --> 0 
+	///					  phi2[sd3]	
+
+	///		2 --> 3	 4 --> 5 --> 6 --> 7  1 --> 2
+	///		|	  |	 |	  		 	   |  | sd2	|
+	///		1 <-- 0  3 <-- 2 <-- 1 <-- 0  0 <-- 3
+	///		  sd1		            sd0	
+
+
+	let sd0 = boneScaffold[spine];
+	let sd1 = boneScaffold[rightArm]; 
+	let sd2 = boneScaffold[leftArm]; 
+	let sd3 = boneScaffold[neck]; 
+
+	scaffoldHDart[sd0] = cmap3.phi2[wd0];
+	sd0 = scaffold.phi1[sd0]; // edge 1-2
+	scaffoldHDart[sd0] = cmap3.phi2[wd1];
+	sd0 = scaffold.phi1[sd0]; // edge 2-3
+	scaffoldHDart[sd0] = cmap3.phi2[wd2];
+	sd0 = scaffold.phi1[sd0]; // edge 3-4
+	scaffoldHDart[sd0] = cmap3.phi([2,-1], wd2);
+	sd0 = scaffold.phi1[sd0]; // edge 4-5
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd2);
+	sd0 = scaffold.phi1[sd0]; // edge 5-6
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd1);
+	sd0 = scaffold.phi1[sd0]; // edge 6-7
+	scaffoldHDart[sd0] = cmap3.phi([2,1,1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 7-0
+	scaffoldHDart[sd0] = cmap3.phi([2,1], wd0);
+	sd0 = scaffold.phi1[sd0];
+
+	scaffoldHDart[sd1] = cmap3.phi([1,2], wd2);
+	sd1 = scaffold.phi1[sd1]; // edge 1-2
+	scaffoldHDart[sd1] = cmap3.phi([1,2,-1], wd2);
+	sd1 = scaffold.phi1[sd1]; // edge 2-3
+	scaffoldHDart[sd1] = cmap3.phi([1,2,1,1], wd2);
+	sd1 = scaffold.phi1[sd1]; // edge 3-0
+	scaffoldHDart[sd1] = cmap3.phi([1,2,1], wd2);
+	sd1 = scaffold.phi1[sd1];
+
+	scaffoldHDart[sd2] = cmap3.phi([-1,2,-1], wd0);
+	sd2 = scaffold.phi1[sd2]; // edge 1-2
+	scaffoldHDart[sd2] = cmap3.phi([-1,2,-1,-1], wd0);
+	sd2 = scaffold.phi1[sd2]; // edge 2-3
+	scaffoldHDart[sd2] = cmap3.phi([-1,2,1], wd0);
+	sd2 = scaffold.phi1[sd2]; // edge 3-0
+	scaffoldHDart[sd2] = cmap3.phi([-1,2], wd0);
+	sd2 = scaffold.phi1[sd2];
+
+	sd3 = scaffold.phi2[sd3]; // edge 1-0
+	scaffoldHDart[sd3] = cmap3.phi([1,1,2], wd1);
+	sd3 = scaffold.phi1[sd3]; // edge 0-3
+	scaffoldHDart[sd3] = cmap3.phi([1,1,2,-1], wd1);
+	sd3 = scaffold.phi1[sd3]; // edge 3-2
+	scaffoldHDart[sd3] = cmap3.phi([1,1,2,-1,-1], wd1);
+	sd3 = scaffold.phi1[sd3]; // edge 2-1
+	scaffoldHDart[sd3] = cmap3.phi([1,1,2,1], wd1);
+	sd3 = scaffold.phi1[sd3];
+
+	return wd0;
+
+}
+
+function insertLimb(cmap3, upperLimbLabel, lowerLimbLabel) {
+	const boneScaffold = skeleton.getBoneAttribute("scaffold");
+	const upperLimb = skeleton.getBone(upperLimbLabel);
+	const lowerLimb = skeleton.getBone(lowerLimbLabel);
+
+	const wd0 = create1Chunk(cmap3);
+
+	let sd0 = boneScaffold[upperLimb];
+	let sd1 = boneScaffold[lowerLimb]; // edge 0-1
+
+	///		2 --> 3	 	1 --> 2
+	///		|	  |	 	| 2sd0 |
+	///		1 <-- 0  	0 <-- 3
+	///		  sd1		
+
+	sd0 = scaffold.phi2[sd0]; // edge 0-1
+	scaffoldHDart[sd0] = cmap3.phi([-1,2], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 1-2
+	scaffoldHDart[sd0] = cmap3.phi([-1,2,-1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 2-3
+	scaffoldHDart[sd0] = cmap3.phi([-1,2,1,1], wd0);
+	sd0 = scaffold.phi1[sd0]; // edge 3-0
+	scaffoldHDart[sd0] = cmap3.phi([-1,2,1], wd0);
+	sd0 = scaffold.phi1[sd0];
+
+	// sd1 = scaffold.phi2[sd1]; // edge 0-1
+	scaffoldHDart[sd1] = cmap3.phi([1,2], wd0);
+	sd1 = scaffold.phi1[sd1]; // edge 1-2
+	scaffoldHDart[sd1] = cmap3.phi([1,2,-1], wd0);
+	sd1 = scaffold.phi1[sd1]; // edge 2-3
+	scaffoldHDart[sd1] = cmap3.phi([1,2,1,1], wd0);
+	sd1 = scaffold.phi1[sd1]; // edge 3-0
+	scaffoldHDart[sd1] = cmap3.phi([1,2,1], wd0);
+	sd1 = scaffold.phi1[sd1];
+
+	return wd0;
 }
 
 function testVolumes() {
@@ -817,9 +1044,20 @@ function testVolumes() {
 	const leftShoulder = skeleton.getBone("LeftShoulder");
 
 
-	const wdHips = insertTorsoChunk(hexMesh, "Hips", "Spine")
-	const wdSpine = insertTorsoChunk(hexMesh, "Spine", "Spine1")
-	const wdSpine1 = insertTorsoChunk(hexMesh, "Spine1", "Spine2")
+	const wdSpine = insertTorsoChunk(hexMesh, "Hips", "Spine");
+	const wdSpine1 = insertTorsoChunk(hexMesh, "Spine", "Spine1");
+	const wdSpine2 = insertTorsoChunk(hexMesh, "Spine1", "Spine2");
+	const wdHips = insertHipsChunk(hexMesh, "LeftUpLeg", "RightUpLeg", "Hips");
+	const wdShoulders = insertShouldersChunk(hexMesh, "Spine2", "LeftArm", "RightArm", "Neck")
+	const wdRightForeArm = insertLimb(hexMesh, "RightForeArm", "RightHand")
+	const wdRightArm = insertLimb(hexMesh, "RightArm", "RightForeArm")
+	const wdLeftForeArm = insertLimb(hexMesh, "LeftForeArm", "LeftHand")
+	const wdLeftArm = insertLimb(hexMesh, "LeftArm", "LeftForeArm")
+	const wdRightUpLeg = insertLimb(hexMesh, "RightUpLeg", "RightLeg")
+	const wdLeftUpLeg = insertLimb(hexMesh, "LeftUpLeg", "LeftLeg")
+	const wdRightLeg = insertLimb(hexMesh, "RightLeg", "RightFoot")
+	const wdLeftLeg = insertLimb(hexMesh, "LeftLeg", "LeftFoot")
+	const wdNeck = insertLimb(hexMesh, "Head", "Neck")
 
 	let sd0 = boneScaffold[hips]; // edge 0-1
 	let sd1 = scaffold.phi2[boneScaffold[spine]];
@@ -830,77 +1068,89 @@ function testVolumes() {
 	let sd4 = boneScaffold[spine1]; // edge 0-1
 	let sd5 = scaffold.phi2[boneScaffold[spine2]];
 
-	/// sew volume faces
-	/// mark sown
-	/// skip marked
+
+	let sd6 = boneScaffold[leftUpLeg]; // edge 0-1
+	let sd7 = boneScaffold[rightUpLeg]; // edge 0-1
+
+
+	let sd8 = boneScaffold[leftArm]; // edge 0-1
+	let sd9 = boneScaffold[rightArm]; // edge 0-1
+	let sd10 = scaffold.phi2[boneScaffold[neck]]; // edge 0-1
+
+	let sd11 = boneScaffold[rightHand]
+	let sd12 = scaffold.phi2[boneScaffold[rightForeArm]]
+
+	let sd13 = boneScaffold[rightForeArm]
+	let sd14 = scaffold.phi2[boneScaffold[rightArm]]
+
+
+	let sd15 = boneScaffold[leftHand]
+	let sd16 = scaffold.phi2[boneScaffold[leftForeArm]]
+
+	let sd17 = boneScaffold[leftForeArm]
+	let sd18 = scaffold.phi2[boneScaffold[leftArm]]
+
+
+	let sd19 = boneScaffold[leftLeg]
+	let sd20 = boneScaffold[leftFoot]
+	// let sd20 = scaffold.phi2[boneScaffold[leftUpLeg]]
+
+	let sd21 = boneScaffold[rightLeg]
+	// let sd22 = scaffold.phi2[boneScaffold[rightUpLeg]]
+	let sd22 = boneScaffold[rightFoot]
+
+	let sd23 = scaffold.phi2[boneScaffold[head]]
+	let sd24 = boneScaffold[neck]
+
 
 	let sewingMarker = hexMesh.newMarker();
-	scaffold.foreachDartPhi1(sd1, sd => {
-		const wd0 = scaffoldHDart[sd];
-		const wd1 = scaffoldHDart[scaffold.phi2[sd]];
-		console.log(sd, wd0, scaffold.phi2[sd], wd1)
-
-		if(sewingMarker.markedCell(hexMesh.face2, wd0))
-			return;
-		console.log("unmarked face")
-
-		sewVolumes(hexMesh, wd0, wd1);
-
-		sewingMarker.markCell(hexMesh.face, wd0)
-
-	})
-
-	scaffold.foreachDartPhi1(sd3, sd => {
-		const wd0 = scaffoldHDart[sd];
-		const wd1 = scaffoldHDart[scaffold.phi2[sd]];
-		console.log(sd, wd0, scaffold.phi2[sd], wd1)
-
-		if(sewingMarker.markedCell(hexMesh.face2, wd0))
-			return;
-		console.log("unmarked face")
-
-		sewVolumes(hexMesh, wd0, wd1);
-
-		sewingMarker.markCell(hexMesh.face, wd0)
-
-	})
+	/// replace with foreach volume
+	const scaffoldSewing = [sd0, sd1, sd3,sd5,sd9,sd13,sd8,sd17,sd7,sd6,sd19,sd21,sd24]
+	scaffoldSewing.forEach(sd0 => {
+		scaffold.foreachDartPhi1(sd0, sd => {
+			const wd0 = scaffoldHDart[sd];
+			const wd1 = scaffoldHDart[scaffold.phi2[sd]];
+	
+			if(sewingMarker.markedCell(hexMesh.face2, wd0))
+				return;
+			sewVolumes(hexMesh, wd0, wd1);
+	
+			sewingMarker.markCell(hexMesh.face, wd0)
+		})
+	});
 
 	hexMesh.close();
 	hexMesh.setEmbeddings(hexMesh.vertex);
 	const hexPosition = hexMesh.addAttribute(hexMesh.vertex, "position");
+	const hexWeights = hexMesh.addAttribute(hexMesh.vertex, "weights");
+	const hexBind = hexMesh.addAttribute(hexMesh.vertex, "bind");
 	console.log(hexMesh.nbCells(hexMesh.volume), hexMesh.nbDarts())
 	hexMesh.foreach(hexMesh.vertex, vd => {
-		console.log(vd, hexMesh.cell(hexMesh.vertex, vd))
 		hexPosition[hexMesh.cell(hexMesh.vertex, vd)] = new THREE.Vector3;
 	
 	})
 
-	console.log(scaffoldHDart)
-	scaffold.foreachDartPhi1(sd0, sd => {
-		console.log(sd, scaffoldHDart[sd])
-		const vd = scaffoldHDart[sd];
-		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	const scaffoldPosCopy = [sd0, sd1, sd3, sd5, sd6, sd7, sd9, sd8, sd10, sd11, sd12,sd13,sd14,sd17,sd15,sd19,sd21,sd20,sd22,sd23]
+	const scaffoldWeights = scaffold.getAttribute(scaffold.vertex, "weights");
+
+	scaffoldPosCopy.forEach(sd0 => {
+		scaffold.foreachDartPhi1(sd0, sd => {
+			const vd = scaffoldHDart[sd];
+			const hvid = hexMesh.cell(hexMesh.vertex, vd);
+			hexPosition[hvid].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+			hexWeights[hvid] = scaffoldWeights[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]
+		})
 	})
 
-	scaffold.foreachDartPhi1(sd1, sd => {
-		console.log(sd, scaffoldHDart[sd])
-		const vd = scaffoldHDart[sd];
-		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
+	console.log(hexWeights)
+	
+	
+	hexMesh.foreach(hexMesh.vertex, vd => {
+		hexBind[hexMesh.cell(hexMesh.vertex, vd)] = hexPosition[hexMesh.cell(hexMesh.vertex, vd)].clone();
+	
 	})
 
-	scaffold.foreachDartPhi1(sd3, sd => {
-		console.log(sd, scaffoldHDart[sd])
-		const vd = scaffoldHDart[sd];
-		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
-	})
-
-	scaffold.foreachDartPhi1(sd5, sd => {
-		console.log(sd, scaffoldHDart[sd])
-		const vd = scaffoldHDart[sd];
-		hexPosition[hexMesh.cell(hexMesh.vertex, vd)].copy(scaffoldPosition[scaffold.cell(scaffold.vertex,scaffold.phi2[sd])]);
-	})
-
-	const hexRenderer = new Renderer(hexMesh);
+	hexRenderer = new Renderer(hexMesh);
 	hexRenderer.vertices.create({size:0.5}).addTo(scene);
 	hexRenderer.edges.create({size: 100}).addTo(scene);
 
@@ -946,7 +1196,7 @@ loadFileAsync("./Files/Hip Hop Dancing.fbx", function(error, fileText) {
 		cmapRenderers[0] = new Renderer(cmaps[0]);
 		// cmapRenderers[1] = new Renderer(cmaps[1]);
 
-		cmapRenderers[0].vertices.create({size: 0.25}).addTo(scene)
+		cmapRenderers[0].vertices.create({size: 0.25})//.addTo(scene)
 		// cmapRenderers[1].edges.create({size: 20, color: 0x0000bb}).addTo(scene)
 
 		// const weights = cmaps[0].getAttribute(cmaps[0].vertex, "weights");
